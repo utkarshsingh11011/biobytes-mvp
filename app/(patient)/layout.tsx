@@ -1,0 +1,44 @@
+import { getServerSession } from "next-auth/next"
+import { authOptions } from "@/lib/auth"
+import { redirect } from "next/navigation"
+import Link from "next/link"
+import { Activity, LayoutDashboard, LineChart, LogOut, UploadCloud } from "lucide-react"
+
+export default async function PatientLayout({ children }: { children: React.ReactNode }) {
+  const session = await getServerSession(authOptions)
+  
+  if (!session || session.user.role !== "PATIENT") {
+    redirect("/login")
+  }
+
+  return (
+    <div className="flex min-h-screen flex-col bg-muted/40">
+      <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6">
+        <Link href="/" className="flex items-center space-x-2">
+          <Activity className="h-6 w-6 text-primary" />
+          <span className="font-bold text-xl tracking-tight hidden md:inline-block">BioBytes</span>
+        </Link>
+        <nav className="flex-1 flex items-center space-x-4 md:space-x-6 ml-6">
+          <Link href="/patient/dashboard" className="text-sm font-medium transition-colors hover:text-primary flex items-center">
+            <LayoutDashboard className="mr-2 h-4 w-4" /> Dashboard
+          </Link>
+          <Link href="/patient/upload" className="text-sm font-medium transition-colors hover:text-primary flex items-center">
+            <UploadCloud className="mr-2 h-4 w-4" /> Upload
+          </Link>
+          <Link href="/patient/trends" className="text-sm font-medium transition-colors hover:text-primary flex items-center">
+            <LineChart className="mr-2 h-4 w-4" /> Trends
+          </Link>
+        </nav>
+        <div className="flex items-center gap-4">
+          <span className="text-sm font-medium hidden sm:inline-block">Hello, {session.user.name}</span>
+          <Link href="/api/auth/signout" className="text-sm font-medium text-muted-foreground hover:text-foreground flex items-center">
+            <LogOut className="h-4 w-4 mr-2" /> Sign out
+          </Link>
+        </div>
+      </header>
+      <main className="flex-1 p-4 md:p-6 lg:p-8">
+        {children}
+      </main>
+    </div>
+  )
+}
