@@ -17,17 +17,26 @@ export default function DoctorAccessPage() {
   const [scanning, setScanning] = useState(false)
 
   useEffect(() => {
+    let scanner: Html5QrcodeScanner | null = null;
     if (scanning) {
-      const scanner = new Html5QrcodeScanner("reader", { qrbox: { width: 250, height: 250 }, fps: 5 }, false)
-      scanner.render((decodedText) => {
-         setCode(decodedText.replace('BIO-', ''))
-         setScanning(false)
-         scanner.clear()
-      }, (err) => {
-         // Ignore frame errors
-      })
+      // Allow Dialog animation to finish rendering the #reader div
+      const timer = setTimeout(() => {
+        scanner = new Html5QrcodeScanner("reader", { qrbox: { width: 250, height: 250 }, fps: 5 }, false)
+        scanner.render((decodedText) => {
+           setCode(decodedText.replace('BIO-', ''))
+           setScanning(false)
+        }, (err) => {
+           // Ignore frame errors
+        })
+      }, 150)
+      
       return () => { 
-        scanner.clear().catch(console.error)
+        clearTimeout(timer)
+        if (scanner) {
+          try {
+            scanner.clear().catch(console.error)
+          } catch(e) {}
+        }
       }
     }
   }, [scanning])

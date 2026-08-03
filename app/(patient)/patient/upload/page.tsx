@@ -37,7 +37,8 @@ export default function UploadPage() {
         router.push("/patient/dashboard")
         router.refresh()
       } else {
-        setError("Upload failed. Please try again.")
+        const errorData = await res.json().catch(() => ({}))
+        setError(errorData.error || "Upload failed. Please try again.")
       }
     } catch (err) {
       setError("An error occurred during upload.")

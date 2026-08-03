@@ -78,7 +78,8 @@ export async function POST(req: Request) {
       throw new Error("Failed to extract data from the AI vision model.")
     }
 
-    const parsedData = JSON.parse(resultText)
+    let cleanText = resultText.replace(/```json/gi, "").replace(/```/g, "").trim()
+    const parsedData = JSON.parse(cleanText)
 
     // Hardcoded Database Routing (Strict Schema Mapping)
     // Create the base report record
@@ -106,8 +107,8 @@ export async function POST(req: Request) {
     })
 
     return NextResponse.json({ success: true, report, healthRecord })
-  } catch (error) {
+  } catch (error: any) {
     console.error("Extraction error:", error)
-    return NextResponse.json({ error: "Failed to process report" }, { status: 500 })
+    return NextResponse.json({ error: error?.message || "Failed to process report" }, { status: 500 })
   }
 }
