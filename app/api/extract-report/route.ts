@@ -7,7 +7,11 @@ import { GoogleGenAI, Type } from "@google/genai"
 const prisma = new PrismaClient()
 
 // Note: Ensure GEMINI_API_KEY is available in your .env
-const ai = new GoogleGenAI({})
+const apiKey = process.env.GEMINI_API_KEY
+if (!apiKey) {
+  console.warn("WARNING: GEMINI_API_KEY is missing in Vercel Environment Variables")
+}
+const ai = new GoogleGenAI({ apiKey: apiKey || "MISSING_API_KEY_PLEASE_ADD_TO_VERCEL" })
 
 export const maxDuration = 60 // Allow longer execution time for Vercel Serverless
 
