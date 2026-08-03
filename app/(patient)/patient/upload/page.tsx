@@ -65,7 +65,7 @@ export default function UploadPage() {
             <div className="space-y-4">
               <label htmlFor="file-upload" className="cursor-pointer font-medium bg-primary text-primary-foreground hover:bg-primary/90 px-6 py-3 rounded-md inline-block shadow-sm transition-all active:scale-95">
                 <span>Upload or Snap Report</span>
-                <input id="file-upload" type="file" className="sr-only" onChange={handleFileChange} accept="image/*,application/pdf" capture="environment" />
+                <input id="file-upload" type="file" className="sr-only" onChange={handleFileChange} accept="image/*,application/pdf" />
               </label>
               <p className="text-sm text-muted-foreground block">Take a photo directly or upload a PDF/JPG</p>
             </div>
