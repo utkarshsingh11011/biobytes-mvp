@@ -46,22 +46,23 @@ export async function POST(req: Request) {
           },
         },
         {
-          text: `You are an expert medical data extractor. Extract the following biomarkers from this lab report exactly as they appear. 
+          text: `You are an expert medical data extractor. Extract every single biomarker/test found in this lab report. 
           CRITICAL: DO NOT hallucinate or guess any data. Only extract values that are explicitly written on the report. 
-          If a value is not found, you MUST return null. Convert to standard numerical format if it has commas.
           
           Return ONLY a JSON object with this exact structure, nothing else:
           {
             "patient_name": "<Extract the patient's full name from the report. Return null if not found.>",
-            "hemoglobin": <number or null>,
-            "fasting_blood_sugar": <number or null>,
-            "thyroid_tsh": <number or null>,
-            "ldl_cholesterol": <number or null>,
-            "hdl_cholesterol": <number or null>,
-            "triglycerides": <number or null>,
-            "vitamin_d": <number or null>,
-            "vitamin_b12": <number or null>,
-            "overall_summary": "<A 2-3 sentence clinical summary of the patient's health based on these metrics. Highlight any abnormal values.>"
+            "overall_summary": "<A 2-3 sentence clinical summary of the patient's health based on these metrics. Highlight any abnormal values.>",
+            "biomarkers": [
+              {
+                "name": "Hemoglobin",
+                "value": 14.5,
+                "unit": "g/dL",
+                "refMin": 13.0,
+                "refMax": 17.0,
+                "isAbnormal": false
+              }
+            ]
           }`,
         },
       ],
@@ -76,16 +77,18 @@ export async function POST(req: Request) {
             report_date: { type: Type.STRING, description: "YYYY-MM-DD" },
             overall_summary: { type: Type.STRING, description: "Clinical summary" },
             biomarkers: {
-              type: Type.OBJECT,
-              properties: {
-                hemoglobin: { type: Type.OBJECT, properties: { value: { type: Type.NUMBER }, unit: { type: Type.STRING } } },
-                fasting_blood_sugar: { type: Type.OBJECT, properties: { value: { type: Type.NUMBER }, unit: { type: Type.STRING } } },
-                thyroid_tsh: { type: Type.OBJECT, properties: { value: { type: Type.NUMBER }, unit: { type: Type.STRING } } },
-                ldl_cholesterol: { type: Type.OBJECT, properties: { value: { type: Type.NUMBER }, unit: { type: Type.STRING } } },
-                hdl_cholesterol: { type: Type.OBJECT, properties: { value: { type: Type.NUMBER }, unit: { type: Type.STRING } } },
-                triglycerides: { type: Type.OBJECT, properties: { value: { type: Type.NUMBER }, unit: { type: Type.STRING } } },
-                vitamin_d: { type: Type.OBJECT, properties: { value: { type: Type.NUMBER }, unit: { type: Type.STRING } } },
-                vitamin_b12: { type: Type.OBJECT, properties: { value: { type: Type.NUMBER }, unit: { type: Type.STRING } } },
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  name: { type: Type.STRING },
+                  value: { type: Type.NUMBER },
+                  unit: { type: Type.STRING },
+                  refMin: { type: Type.NUMBER, nullable: true },
+                  refMax: { type: Type.NUMBER, nullable: true },
+                  isAbnormal: { type: Type.BOOLEAN },
+                },
+                required: ["name", "value", "unit", "isAbnormal"],
               },
             },
           },
@@ -133,19 +136,52 @@ export async function POST(req: Request) {
       },
     })
 
-    // Explicitly write extracted values into designated, locked columns to prevent leakage
+    // Dynamic Biomarker Routing
+    if (parsedData.biomarkers && Array.isArray(parsedData.biomarkers)) {
+      for (const b of parsedData.biomarkers) {
+        if (!b.name || b.value === null || b.value === undefined) continue;
+
+        // Create a canonical code (e.g. "Uric Acid" -> "URIC_ACID")
+        const code = b.name.toUpperCase().replace(/[^A-Z0-9]/g, '_');
+
+        // Find or create BiomarkerDefinition
+        let biomarkerDef = await prisma.biomarkerDefinition.findFirst({
+          where: { code }
+        });
+
+        if (!biomarkerDef) {
+          biomarkerDef = await prisma.biomarkerDefinition.create({
+            data: {
+              code,
+              displayName: b.name,
+              unit: b.unit || "",
+              refMin: b.refMin || null,
+              refMax: b.refMax || null,
+              category: "Extracted",
+            }
+          });
+        }
+
+        // Save the dynamic metric
+        await prisma.extractedMetric.create({
+          data: {
+            reportId: report.id,
+            biomarkerId: biomarkerDef.id,
+            value: b.value,
+            unit: b.unit || biomarkerDef.unit,
+            refMin: b.refMin || biomarkerDef.refMin,
+            refMax: b.refMax || biomarkerDef.refMax,
+            isAbnormal: b.isAbnormal || false,
+          }
+        });
+      }
+    }
+
+    // Still create an empty UserHealthRecord just to satisfy Prisma relations if needed by legacy code
     const healthRecord = await prisma.userHealthRecord.create({
       data: {
         reportId: report.id,
         patientId: session.user.id,
-        hemoglobin: parsedData.biomarkers?.hemoglobin?.value || null,
-        fasting_blood_sugar: parsedData.biomarkers?.fasting_blood_sugar?.value || null,
-        thyroid_tsh: parsedData.biomarkers?.thyroid_tsh?.value || null,
-        ldl_cholesterol: parsedData.biomarkers?.ldl_cholesterol?.value || null,
-        hdl_cholesterol: parsedData.biomarkers?.hdl_cholesterol?.value || null,
-        triglycerides: parsedData.biomarkers?.triglycerides?.value || null,
-        vitamin_d: parsedData.biomarkers?.vitamin_d?.value || null,
-        vitamin_b12: parsedData.biomarkers?.vitamin_b12?.value || null,
       },
     })
 
