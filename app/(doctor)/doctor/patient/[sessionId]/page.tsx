@@ -2,6 +2,7 @@ import { PrismaClient } from "@prisma/client"
 import { notFound } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { AlertCircle, User, FileText } from "lucide-react"
+import DoctorTrendsChart from "./DoctorTrendsChart"
 
 const prisma = new PrismaClient()
 
@@ -137,55 +138,14 @@ export default async function DoctorPatientView({ params }: { params: Promise<{ 
         </Card>
       </div>
 
-      {/* Basic Trend Table View for Doctor */}
+      {/* Clinical Recharts View for Doctor */}
       <Card>
         <CardHeader>
           <CardTitle>Biomarker Trends Overview</CardTitle>
-          <CardDescription>Latest values compared to previous tests.</CardDescription>
+          <CardDescription>Clinical visualizations of patient biomarker history.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead className="text-xs text-muted-foreground uppercase bg-muted/50">
-                <tr>
-                  <th className="px-4 py-3 rounded-tl-lg">Biomarker</th>
-                  <th className="px-4 py-3">Latest Value</th>
-                  <th className="px-4 py-3">Previous Value</th>
-                  <th className="px-4 py-3">Reference Range</th>
-                  <th className="px-4 py-3 rounded-tr-lg">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {Array.from(new Set(metrics.map(m => m.biomarker.code))).map(code => {
-                  const bMetrics = metrics.filter(m => m.biomarker.code === code)
-                  const latest = bMetrics[0]
-                  const previous = bMetrics[1]
-
-                  return (
-                    <tr key={code} className="border-b last:border-0">
-                      <td className="px-4 py-3 font-medium">{latest.biomarker.displayName}</td>
-                      <td className={`px-4 py-3 font-bold ${latest.isAbnormal ? 'text-destructive' : ''}`}>
-                        {latest.value} {latest.unit}
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground">
-                        {previous ? `${previous.value} ${previous.unit}` : '-'}
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground">
-                        {latest.refMin} - {latest.refMax}
-                      </td>
-                      <td className="px-4 py-3">
-                        {latest.isAbnormal ? (
-                          <span className="text-destructive bg-destructive/10 px-2 py-1 rounded text-xs font-semibold">OUT OF RANGE</span>
-                        ) : (
-                          <span className="text-emerald-600 bg-emerald-100 px-2 py-1 rounded text-xs font-semibold">NORMAL</span>
-                        )}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
+          <DoctorTrendsChart metrics={metrics} />
         </CardContent>
       </Card>
 

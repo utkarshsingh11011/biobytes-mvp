@@ -48,11 +48,11 @@ export default function TrendsPage() {
 
       {loading ? (
         <div className="text-center py-20">Loading trends...</div>
-      ) : trends.length === 0 ? (
+      ) : trends.filter(t => t.data && t.data.length > 0).length === 0 ? (
         <div className="text-center py-20 text-muted-foreground">No trend data available for this period.</div>
       ) : (
         <div className="grid gap-6">
-          {trends.map((trend) => (
+          {trends.filter(t => t.data && t.data.length > 0).map((trend) => (
             <Card key={trend.code}>
               <CardHeader>
                 <CardTitle>{trend.name}</CardTitle>

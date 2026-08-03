@@ -47,8 +47,12 @@ export async function POST(req: Request) {
         },
         {
           text: `You are an expert medical data extractor. Extract the following biomarkers from this lab report exactly as they appear. 
+          CRITICAL: DO NOT hallucinate or guess any data. Only extract values that are explicitly written on the report. 
+          If a value is not found, you MUST return null. Convert to standard numerical format if it has commas.
+          
           Return ONLY a JSON object with this exact structure, nothing else:
           {
+            "patient_name": "<Extract the patient's full name from the report. Return null if not found.>",
             "hemoglobin": <number or null>,
             "fasting_blood_sugar": <number or null>,
             "thyroid_tsh": <number or null>,
@@ -58,16 +62,16 @@ export async function POST(req: Request) {
             "vitamin_d": <number or null>,
             "vitamin_b12": <number or null>,
             "overall_summary": "<A 2-3 sentence clinical summary of the patient's health based on these metrics. Highlight any abnormal values.>"
-          }
-          If a value is not found, use null. Convert to standard numerical format if it has commas.`,
+          }`,
         },
       ],
       config: {
-        systemInstruction: "You are an expert medical data extractor. Extract the requested fields from the provided lab report.",
+        systemInstruction: "You are an expert medical data extractor. Extract the requested fields from the provided lab report with absolute strictness. Do not hallucinate.",
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
           properties: {
+            patient_name: { type: Type.STRING },
             lab_name: { type: Type.STRING },
             report_date: { type: Type.STRING, description: "YYYY-MM-DD" },
             overall_summary: { type: Type.STRING, description: "Clinical summary" },
@@ -97,6 +101,22 @@ export async function POST(req: Request) {
 
     let cleanText = resultText.replace(/```json/gi, "").replace(/```/g, "").trim()
     const parsedData = JSON.parse(cleanText)
+
+    // Identity Verification
+    const reportPatientName = (parsedData.patient_name || "").toLowerCase()
+    const accountPatientName = (session.user.name || "").toLowerCase()
+    
+    // Check if there is any overlap in the names (e.g. "Sankalp Verma" vs "Sankalp")
+    if (reportPatientName && accountPatientName) {
+      const reportNameParts = reportPatientName.split(" ").filter(Boolean)
+      const isMatch = reportNameParts.some((part: string) => accountPatientName.includes(part))
+      
+      if (!isMatch) {
+        return NextResponse.json({ 
+          error: `Identity mismatch. The report belongs to "${parsedData.patient_name}", but this account belongs to "${session.user.name}". For security, this upload was blocked.` 
+        }, { status: 403 })
+      }
+    }
 
     // Hardcoded Database Routing (Strict Schema Mapping)
     // Create the base report record
