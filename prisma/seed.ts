@@ -58,6 +58,16 @@ async function main() {
     }
   })
 
+  const utkarshHash = await hash('demo1234', 10)
+  const utkarsh = await prisma.user.create({
+    data: {
+      email: 'utkarsh@demo.com',
+      passwordHash: utkarshHash,
+      name: 'Utkarsh Singh',
+      role: 'PATIENT',
+    }
+  })
+
   const adminHash = await hash('admin1234', 10)
   const admin = await prisma.user.create({
     data: {
@@ -241,6 +251,29 @@ async function main() {
       triglycerides: 90,
       vitamin_d: 18,
       vitamin_b12: 350,
+      createdAt: now,
+    }
+  })
+
+  // === UTKARSH SINGH DATA ===
+  const utkarshReport1 = await prisma.report.create({
+    data: {
+      patientId: utkarsh.id,
+      fileName: 'utkarsh_blood_test.pdf',
+      fileUrl: '/uploads/utkarsh_blood_test.pdf',
+      status: 'PARSED',
+      aiSummary: 'Hemoglobin levels are within the healthy normal range. No other tests were provided in this report.',
+      reportDate: now,
+      labName: 'SRL Diagnostics',
+    }
+  })
+
+  // Utkarsh Report - Only Hemoglobin
+  await prisma.userHealthRecord.create({
+    data: {
+      patientId: utkarsh.id,
+      reportId: utkarshReport1.id,
+      hemoglobin: 15.2,
       createdAt: now,
     }
   })

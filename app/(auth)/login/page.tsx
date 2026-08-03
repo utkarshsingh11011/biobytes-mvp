@@ -111,8 +111,8 @@ export default function LoginPage() {
               <Button type="button" variant="outline" className="w-full bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200" onClick={() => demoLogin("sankalp@demo.com", "/patient/dashboard")} disabled={loading}>
                 Login as Sankalp Verma (Patient)
               </Button>
-              <Button type="button" variant="outline" className="w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200" onClick={() => demoLogin("priya@demo.com", "/patient/dashboard")} disabled={loading}>
-                Login as Priya Sharma (Patient)
+              <Button type="button" variant="outline" className="w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200" onClick={() => demoLogin("utkarsh@demo.com", "/patient/dashboard")} disabled={loading}>
+                Login as Utkarsh Singh (Patient)
               </Button>
               <Button type="button" variant="outline" className="w-full bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200" onClick={() => demoLogin("doctor@demo.com", "/doctor/dashboard")} disabled={loading}>
                 Login as Dr. Rahul Verma
