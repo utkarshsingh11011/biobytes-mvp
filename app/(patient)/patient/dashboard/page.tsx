@@ -70,8 +70,25 @@ export default async function PatientDashboard() {
           </CardContent>
         </Card>
 
+        {/* Latest Health Summary */}
+        <Card className="md:col-span-2 bg-primary/5 border-primary/20">
+          <CardHeader className="pb-3">
+            <div className="flex items-center space-x-2">
+              <FileText className="h-5 w-5 text-primary" />
+              <CardTitle className="text-xl">Latest Health Summary</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {reports[0]?.aiSummary ? (
+              <p className="text-sm leading-relaxed">{reports[0].aiSummary}</p>
+            ) : (
+              <p className="text-sm text-muted-foreground">Upload a new report to get an AI-generated health summary.</p>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Recent Reports */}
-        <Card>
+        <Card className="md:col-span-2">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">

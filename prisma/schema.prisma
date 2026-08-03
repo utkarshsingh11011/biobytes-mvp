@@ -43,6 +43,7 @@ model Report {
   status      String   @default("UPLOADED") // UPLOADED, PROCESSING, PARSED, FAILED
   rawText     String?
   parsedJson  String?
+  aiSummary   String?
   reportDate  DateTime?
   labName     String?
   createdAt   DateTime @default(now())
@@ -155,6 +156,11 @@ model UserHealthRecord {
   hemoglobin          Float?
   fasting_blood_sugar Float?
   thyroid_tsh         Float?
+  ldl_cholesterol     Float?
+  hdl_cholesterol     Float?
+  triglycerides       Float?
+  vitamin_d           Float?
+  vitamin_b12         Float?
   
   createdAt           DateTime @default(now())
 }

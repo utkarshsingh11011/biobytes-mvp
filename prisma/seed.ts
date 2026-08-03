@@ -48,6 +48,16 @@ async function main() {
     }
   })
 
+  const sankalpHash = await hash('demo1234', 10)
+  const sankalp = await prisma.user.create({
+    data: {
+      email: 'sankalp@demo.com',
+      passwordHash: sankalpHash,
+      name: 'Sankalp Verma',
+      role: 'PATIENT',
+    }
+  })
+
   const adminHash = await hash('admin1234', 10)
   const admin = await prisma.user.create({
     data: {
@@ -138,6 +148,101 @@ async function main() {
       { reportId: report2.id, biomarkerId: chol.id, value: 220, unit: chol.unit, refMin: chol.refMin, refMax: chol.refMax, isAbnormal: true }, // High Total
       { reportId: report2.id, biomarkerId: hba1c.id, value: 5.8, unit: hba1c.unit, refMin: hba1c.refMin, refMax: hba1c.refMax, isAbnormal: true }, // High HbA1c
     ]
+  })
+
+  // === SANKALP VERMA DATA ===
+  const twelveMonthsAgo = new Date(now)
+  twelveMonthsAgo.setMonth(now.getMonth() - 12)
+
+  const sankalpReport1 = await prisma.report.create({
+    data: {
+      patientId: sankalp.id,
+      fileName: 'sankalp_2025_jan.pdf',
+      fileUrl: '/uploads/sankalp_2025_jan.pdf',
+      status: 'PARSED',
+      aiSummary: 'Patient exhibits healthy baseline metrics across lipid and glycemic profiles. No immediate interventions required.',
+      reportDate: twelveMonthsAgo,
+      labName: 'Thyrocare',
+    }
+  })
+
+  const sankalpReport2 = await prisma.report.create({
+    data: {
+      patientId: sankalp.id,
+      fileName: 'sankalp_2025_july.pdf',
+      fileUrl: '/uploads/sankalp_2025_july.pdf',
+      status: 'PARSED',
+      aiSummary: 'Slight elevation in LDL Cholesterol observed. Fasting blood sugar remains stable. Advised dietary modifications.',
+      reportDate: sixMonthsAgo,
+      labName: 'Thyrocare',
+    }
+  })
+
+  const sankalpReport3 = await prisma.report.create({
+    data: {
+      patientId: sankalp.id,
+      fileName: 'sankalp_2026_jan.pdf',
+      fileUrl: '/uploads/sankalp_2026_jan.pdf',
+      status: 'PARSED',
+      aiSummary: 'Significant improvement in lipid profile following dietary changes. LDL has decreased to normal levels. Vitamin D is slightly deficient, supplementation recommended.',
+      reportDate: now,
+      labName: 'SRL Diagnostics',
+    }
+  })
+
+  const vitD = await prisma.biomarkerDefinition.create({ data: { code: 'VITAMIN_D', displayName: 'Vitamin D', unit: 'ng/mL', refMin: 20, refMax: 50, category: 'Vitamins' } })
+  const vitB12 = await prisma.biomarkerDefinition.create({ data: { code: 'VITAMIN_B12', displayName: 'Vitamin B12', unit: 'pg/mL', refMin: 200, refMax: 900, category: 'Vitamins' } })
+  const trig = biomarkers.find(b => b.code === 'TRIGLYCERIDES')!
+
+  // Sankalp Report 1 (12 months ago)
+  await prisma.userHealthRecord.create({
+    data: {
+      patientId: sankalp.id,
+      reportId: sankalpReport1.id,
+      hemoglobin: 14.5,
+      fasting_blood_sugar: 85,
+      thyroid_tsh: 2.1,
+      ldl_cholesterol: 90,
+      hdl_cholesterol: 60,
+      triglycerides: 110,
+      vitamin_d: 35,
+      vitamin_b12: 450,
+      createdAt: twelveMonthsAgo,
+    }
+  })
+
+  // Sankalp Report 2 (6 months ago)
+  await prisma.userHealthRecord.create({
+    data: {
+      patientId: sankalp.id,
+      reportId: sankalpReport2.id,
+      hemoglobin: 14.2,
+      fasting_blood_sugar: 88,
+      thyroid_tsh: 2.3,
+      ldl_cholesterol: 135,
+      hdl_cholesterol: 55,
+      triglycerides: 140,
+      vitamin_d: 28,
+      vitamin_b12: 400,
+      createdAt: sixMonthsAgo,
+    }
+  })
+
+  // Sankalp Report 3 (Now)
+  await prisma.userHealthRecord.create({
+    data: {
+      patientId: sankalp.id,
+      reportId: sankalpReport3.id,
+      hemoglobin: 14.8,
+      fasting_blood_sugar: 82,
+      thyroid_tsh: 1.9,
+      ldl_cholesterol: 95,
+      hdl_cholesterol: 65,
+      triglycerides: 90,
+      vitamin_d: 18,
+      vitamin_b12: 350,
+      createdAt: now,
+    }
   })
 
   console.log('Seeding Alerts...')

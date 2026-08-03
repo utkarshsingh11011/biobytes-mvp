@@ -90,7 +90,25 @@ export default async function DoctorPatientView({ params }: { params: Promise<{ 
             )}
           </CardContent>
         </Card>
+      </div>
 
+      {/* Latest Health Summary */}
+      <Card className="bg-emerald-50/50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-900">
+        <CardHeader>
+          <CardTitle className="text-xl flex items-center">
+            <FileText className="mr-2 h-5 w-5 text-emerald-600 dark:text-emerald-400" /> Latest Health Summary
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {reports[0]?.aiSummary ? (
+            <p className="text-sm leading-relaxed">{reports[0].aiSummary}</p>
+          ) : (
+            <p className="text-sm text-muted-foreground">No AI summary available.</p>
+          )}
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle className="text-xl flex items-center">

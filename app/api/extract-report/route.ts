@@ -45,7 +45,22 @@ export async function POST(req: Request) {
             mimeType: mimeType,
           },
         },
-        "Extract the lab report details according to the schema.",
+        {
+          text: `You are an expert medical data extractor. Extract the following biomarkers from this lab report exactly as they appear. 
+          Return ONLY a JSON object with this exact structure, nothing else:
+          {
+            "hemoglobin": <number or null>,
+            "fasting_blood_sugar": <number or null>,
+            "thyroid_tsh": <number or null>,
+            "ldl_cholesterol": <number or null>,
+            "hdl_cholesterol": <number or null>,
+            "triglycerides": <number or null>,
+            "vitamin_d": <number or null>,
+            "vitamin_b12": <number or null>,
+            "overall_summary": "<A 2-3 sentence clinical summary of the patient's health based on these metrics. Highlight any abnormal values.>"
+          }
+          If a value is not found, use null. Convert to standard numerical format if it has commas.`,
+        },
       ],
       config: {
         systemInstruction: "You are an expert medical data extractor. Extract the requested fields from the provided lab report.",
@@ -55,25 +70,22 @@ export async function POST(req: Request) {
           properties: {
             lab_name: { type: Type.STRING },
             report_date: { type: Type.STRING, description: "YYYY-MM-DD" },
+            overall_summary: { type: Type.STRING, description: "Clinical summary" },
             biomarkers: {
               type: Type.OBJECT,
               properties: {
-                hemoglobin: {
-                  type: Type.OBJECT,
-                  properties: { value: { type: Type.NUMBER }, unit: { type: Type.STRING } },
-                },
-                fasting_blood_sugar: {
-                  type: Type.OBJECT,
-                  properties: { value: { type: Type.NUMBER }, unit: { type: Type.STRING } },
-                },
-                thyroid_tsh: {
-                  type: Type.OBJECT,
-                  properties: { value: { type: Type.NUMBER }, unit: { type: Type.STRING } },
-                },
+                hemoglobin: { type: Type.OBJECT, properties: { value: { type: Type.NUMBER }, unit: { type: Type.STRING } } },
+                fasting_blood_sugar: { type: Type.OBJECT, properties: { value: { type: Type.NUMBER }, unit: { type: Type.STRING } } },
+                thyroid_tsh: { type: Type.OBJECT, properties: { value: { type: Type.NUMBER }, unit: { type: Type.STRING } } },
+                ldl_cholesterol: { type: Type.OBJECT, properties: { value: { type: Type.NUMBER }, unit: { type: Type.STRING } } },
+                hdl_cholesterol: { type: Type.OBJECT, properties: { value: { type: Type.NUMBER }, unit: { type: Type.STRING } } },
+                triglycerides: { type: Type.OBJECT, properties: { value: { type: Type.NUMBER }, unit: { type: Type.STRING } } },
+                vitamin_d: { type: Type.OBJECT, properties: { value: { type: Type.NUMBER }, unit: { type: Type.STRING } } },
+                vitamin_b12: { type: Type.OBJECT, properties: { value: { type: Type.NUMBER }, unit: { type: Type.STRING } } },
               },
             },
           },
-          required: ["lab_name", "report_date", "biomarkers"],
+          required: ["lab_name", "report_date", "biomarkers", "overall_summary"],
         },
       },
     })
@@ -95,6 +107,7 @@ export async function POST(req: Request) {
         fileUrl: "/placeholder.pdf", // Normally would be uploaded to S3/Cloudinary
         status: "PARSED",
         parsedJson: resultText,
+        aiSummary: parsedData.overall_summary || null,
         labName: parsedData.lab_name,
         reportDate: parsedData.report_date ? new Date(parsedData.report_date) : new Date(),
       },
@@ -108,6 +121,11 @@ export async function POST(req: Request) {
         hemoglobin: parsedData.biomarkers?.hemoglobin?.value || null,
         fasting_blood_sugar: parsedData.biomarkers?.fasting_blood_sugar?.value || null,
         thyroid_tsh: parsedData.biomarkers?.thyroid_tsh?.value || null,
+        ldl_cholesterol: parsedData.biomarkers?.ldl_cholesterol?.value || null,
+        hdl_cholesterol: parsedData.biomarkers?.hdl_cholesterol?.value || null,
+        triglycerides: parsedData.biomarkers?.triglycerides?.value || null,
+        vitamin_d: parsedData.biomarkers?.vitamin_d?.value || null,
+        vitamin_b12: parsedData.biomarkers?.vitamin_b12?.value || null,
       },
     })
 

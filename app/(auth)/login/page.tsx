@@ -36,15 +36,14 @@ export default function LoginPage() {
     }
   }
 
-  const demoLogin = async (role: "patient" | "doctor") => {
+  const demoLogin = async (emailToLogin: string, roleUrl: string) => {
     setLoading(true)
     setError("")
     
-    const demoEmail = role === "patient" ? "priya@demo.com" : "doctor@demo.com"
     const demoPassword = "demo1234"
 
     const res = await signIn("credentials", {
-      email: demoEmail,
+      email: emailToLogin,
       password: demoPassword,
       redirect: false,
     })
@@ -53,7 +52,7 @@ export default function LoginPage() {
       setError("Demo account login failed. Please ensure the database is seeded.")
       setLoading(false)
     } else {
-      router.push(role === "patient" ? "/patient/dashboard" : "/doctor/dashboard")
+      router.push(roleUrl)
       router.refresh()
     }
   }
@@ -109,11 +108,14 @@ export default function LoginPage() {
                 <span className="flex-shrink-0 mx-4 text-muted-foreground text-xs uppercase">Or</span>
                 <div className="flex-grow border-t border-muted"></div>
               </div>
-              <Button type="button" variant="outline" className="w-full bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200" onClick={() => demoLogin("patient")} disabled={loading}>
-                Login as Demo Patient
+              <Button type="button" variant="outline" className="w-full bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200" onClick={() => demoLogin("sankalp@demo.com", "/patient/dashboard")} disabled={loading}>
+                Login as Sankalp Verma (Patient)
               </Button>
-              <Button type="button" variant="outline" className="w-full bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200" onClick={() => demoLogin("doctor")} disabled={loading}>
-                Login as Demo Doctor
+              <Button type="button" variant="outline" className="w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200" onClick={() => demoLogin("priya@demo.com", "/patient/dashboard")} disabled={loading}>
+                Login as Priya Sharma (Patient)
+              </Button>
+              <Button type="button" variant="outline" className="w-full bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200" onClick={() => demoLogin("doctor@demo.com", "/doctor/dashboard")} disabled={loading}>
+                Login as Dr. Rahul Verma
               </Button>
               <div className="text-xs text-center text-muted-foreground mt-4">
                 Admin: admin@biobytes.in / admin1234
