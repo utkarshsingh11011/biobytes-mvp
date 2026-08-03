@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import Link from "next/link"
-import { Activity, LayoutDashboard, LineChart, LogOut, UploadCloud } from "lucide-react"
+import { Activity, LayoutDashboard, LineChart, LogOut, UploadCloud, Calendar, HeartHandshake } from "lucide-react"
 
 export default async function PatientLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions)
@@ -18,15 +18,21 @@ export default async function PatientLayout({ children }: { children: React.Reac
           <Activity className="h-6 w-6 text-primary" />
           <span className="font-bold text-xl tracking-tight hidden md:inline-block">BioBytes</span>
         </Link>
-        <nav className="flex-1 flex items-center space-x-4 md:space-x-6 ml-6">
-          <Link href="/patient/dashboard" className="text-sm font-medium transition-colors hover:text-primary flex items-center">
+        <nav className="flex-1 flex items-center space-x-4 md:space-x-6 ml-6 overflow-x-auto">
+          <Link href="/patient/dashboard" className="text-sm font-medium transition-colors hover:text-primary flex items-center whitespace-nowrap">
             <LayoutDashboard className="mr-2 h-4 w-4" /> Dashboard
           </Link>
-          <Link href="/patient/upload" className="text-sm font-medium transition-colors hover:text-primary flex items-center">
+          <Link href="/patient/upload" className="text-sm font-medium transition-colors hover:text-primary flex items-center whitespace-nowrap">
             <UploadCloud className="mr-2 h-4 w-4" /> Upload
           </Link>
-          <Link href="/patient/trends" className="text-sm font-medium transition-colors hover:text-primary flex items-center">
+          <Link href="/patient/trends" className="text-sm font-medium transition-colors hover:text-primary flex items-center whitespace-nowrap">
             <LineChart className="mr-2 h-4 w-4" /> Trends
+          </Link>
+          <Link href="/patient/appointments" className="text-sm font-medium transition-colors hover:text-primary flex items-center whitespace-nowrap">
+            <Calendar className="mr-2 h-4 w-4" /> Appointments
+          </Link>
+          <Link href="/patient/partners" className="text-sm font-medium transition-colors hover:text-primary flex items-center whitespace-nowrap">
+            <HeartHandshake className="mr-2 h-4 w-4" /> Partners
           </Link>
         </nav>
         <div className="flex items-center gap-4">

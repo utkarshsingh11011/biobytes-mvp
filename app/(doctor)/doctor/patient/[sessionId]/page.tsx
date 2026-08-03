@@ -38,6 +38,13 @@ export default async function DoctorPatientView({ params }: { params: Promise<{ 
     orderBy: { report: { reportDate: 'desc' } }
   })
 
+  // Fetch AI extracted health records
+  const healthRecords = await prisma.userHealthRecord.findMany({
+    where: { patientId },
+    include: { report: true },
+    orderBy: { createdAt: 'desc' }
+  })
+
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
       <div className="flex justify-between items-center bg-emerald-50 dark:bg-emerald-950/30 p-4 rounded-lg border border-emerald-100 dark:border-emerald-900">
@@ -161,6 +168,37 @@ export default async function DoctorPatientView({ params }: { params: Promise<{ 
               </tbody>
             </table>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Raw AI JSON Records */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Raw AI-Extracted JSON Records</CardTitle>
+          <CardDescription>Direct, strict-schema extractions mapped to hardcoded database columns.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {healthRecords.length === 0 ? (
+            <p className="text-muted-foreground">No AI-extracted records available.</p>
+          ) : (
+            <div className="space-y-4">
+              {healthRecords.map(hr => (
+                <div key={hr.id} className="border rounded-md p-4 bg-slate-950 text-slate-300 font-mono text-sm overflow-x-auto">
+                  <p className="text-emerald-400 mb-2 border-b border-slate-800 pb-2">
+                    Report Date: {new Date(hr.report.reportDate || hr.createdAt).toLocaleDateString()}
+                  </p>
+                  <pre>
+                    {JSON.stringify({
+                      hemoglobin: hr.hemoglobin,
+                      fasting_blood_sugar: hr.fasting_blood_sugar,
+                      thyroid_tsh: hr.thyroid_tsh,
+                      raw_json: hr.report.parsedJson ? JSON.parse(hr.report.parsedJson) : null
+                    }, null, 2)}
+                  </pre>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

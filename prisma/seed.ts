@@ -7,6 +7,7 @@ async function main() {
   console.log('Starting seed...')
 
   // Clean up existing data
+  await prisma.appointment.deleteMany()
   await prisma.healthAlert.deleteMany()
   await prisma.extractedMetric.deleteMany()
   await prisma.report.deleteMany()
@@ -54,6 +55,24 @@ async function main() {
       passwordHash: adminHash,
       name: 'Admin User',
       role: 'ADMIN',
+    }
+  })
+
+  const doctorHash = await hash('demo1234', 10)
+  const doctor = await prisma.user.create({
+    data: {
+      email: 'doctor@demo.com',
+      passwordHash: doctorHash,
+      name: 'Dr. Rahul Verma',
+      role: 'DOCTOR',
+    }
+  })
+
+  await prisma.doctorProfile.create({
+    data: {
+      userId: doctor.id,
+      licenseNumber: 'MCI-98765',
+      specialization: 'General Physician',
     }
   })
 
@@ -137,9 +156,20 @@ async function main() {
   await prisma.doctorAccessCode.create({
     data: {
       patientId: patient.id,
-      code: 'BIO-DEMO-1234',
+      code: '123456',
       expiresAt: expiry,
       maxUses: 10,
+    }
+  })
+
+  console.log('Seeding Appointments...')
+  await prisma.appointment.create({
+    data: {
+      patientId: patient.id,
+      doctorId: doctor.id,
+      scheduledTime: new Date(now.getTime() + 24 * 60 * 60 * 1000), // Tomorrow
+      status: 'PENDING',
+      accessCode: '123456',
     }
   })
 

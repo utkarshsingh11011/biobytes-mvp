@@ -6,12 +6,10 @@ import { PrismaClient } from "@prisma/client"
 const prisma = new PrismaClient()
 
 function generateCode() {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+  const chars = '0123456789'
   let result = ''
-  for (let i = 0; i < 4; i++) result += chars.charAt(Math.floor(Math.random() * chars.length))
-  result += '-'
-  for (let i = 0; i < 4; i++) result += chars.charAt(Math.floor(Math.random() * chars.length))
-  return `BIO-${result}`
+  for (let i = 0; i < 6; i++) result += chars.charAt(Math.floor(Math.random() * chars.length))
+  return result
 }
 
 export async function POST(req: Request) {

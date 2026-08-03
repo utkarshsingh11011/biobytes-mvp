@@ -62,5 +62,28 @@ export async function GET(req: Request) {
     })
   })
 
+  // Append new AI Extracted data from UserHealthRecord
+  const healthRecords = await prisma.userHealthRecord.findMany({
+    where: { patientId: session.user.id, createdAt: { gte: dateLimit } },
+    include: { report: { select: { reportDate: true } } },
+    orderBy: { createdAt: 'asc' }
+  })
+
+  healthRecords.forEach(hr => {
+    const dateStr = hr.report.reportDate?.toISOString() || hr.createdAt.toISOString()
+    if (hr.hemoglobin !== null) {
+      if (!trendsByBiomarker["HEMOGLOBIN"]) trendsByBiomarker["HEMOGLOBIN"] = { name: "Hemoglobin", code: "HEMOGLOBIN", unit: "g/dL", refMin: 13, refMax: 17, data: [] }
+      trendsByBiomarker["HEMOGLOBIN"].data.push({ date: dateStr, value: hr.hemoglobin, isAbnormal: false })
+    }
+    if (hr.fasting_blood_sugar !== null) {
+      if (!trendsByBiomarker["FASTING_SUGAR"]) trendsByBiomarker["FASTING_SUGAR"] = { name: "Fasting Sugar", code: "FASTING_SUGAR", unit: "mg/dL", refMin: 70, refMax: 100, data: [] }
+      trendsByBiomarker["FASTING_SUGAR"].data.push({ date: dateStr, value: hr.fasting_blood_sugar, isAbnormal: false })
+    }
+    if (hr.thyroid_tsh !== null) {
+      if (!trendsByBiomarker["TSH"]) trendsByBiomarker["TSH"] = { name: "Thyroid TSH", code: "TSH", unit: "mIU/L", refMin: 0.4, refMax: 4.0, data: [] }
+      trendsByBiomarker["TSH"].data.push({ date: dateStr, value: hr.thyroid_tsh, isAbnormal: false })
+    }
+  })
+
   return Response.json(Object.values(trendsByBiomarker))
 }

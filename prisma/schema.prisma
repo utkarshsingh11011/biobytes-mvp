@@ -16,11 +16,14 @@ model User {
   createdAt     DateTime  @default(now())
 
   // Relations
-  reports       Report[]  @relation("PatientReports")
-  alerts        HealthAlert[]
-  accessCodes   DoctorAccessCode[]
-  bookings      LabBooking[]
-  doctorProfile DoctorProfile?
+  reports             Report[]       @relation("PatientReports")
+  alerts              HealthAlert[]
+  accessCodes         DoctorAccessCode[]
+  bookings            LabBooking[]
+  doctorProfile       DoctorProfile?
+  patientAppointments Appointment[]  @relation("PatientAppointments")
+  doctorAppointments  Appointment[]  @relation("DoctorAppointments")
+  healthRecords       UserHealthRecord[]
 }
 
 model DoctorProfile {
@@ -45,6 +48,7 @@ model Report {
   createdAt   DateTime @default(now())
 
   metrics     ExtractedMetric[]
+  healthRecord UserHealthRecord?
 }
 
 model BiomarkerDefinition {
@@ -126,4 +130,31 @@ model LabBooking {
   lab         LabPartner @relation(fields: [labId], references: [id], onDelete: Cascade)
   status      String     @default("PENDING") // PENDING, CONFIRMED, COMPLETED
   createdAt   DateTime   @default(now())
+}
+
+model Appointment {
+  id            String    @id @default(uuid())
+  patientId     String
+  patient       User      @relation("PatientAppointments", fields: [patientId], references: [id], onDelete: Cascade)
+  doctorId      String
+  doctor        User      @relation("DoctorAppointments", fields: [doctorId], references: [id], onDelete: Cascade)
+  scheduledTime DateTime
+  status        String    @default("PENDING") // PENDING, ACCEPTED, REJECTED, COMPLETED
+  accessCode    String?   // The 6-digit PIN pre-uploaded by patient
+  createdAt     DateTime  @default(now())
+}
+
+model UserHealthRecord {
+  id                  String   @id @default(uuid())
+  reportId            String   @unique
+  report              Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  patientId           String
+  patient             User     @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  
+  // Hardcoded columns for data integrity
+  hemoglobin          Float?
+  fasting_blood_sugar Float?
+  thyroid_tsh         Float?
+  
+  createdAt           DateTime @default(now())
 }

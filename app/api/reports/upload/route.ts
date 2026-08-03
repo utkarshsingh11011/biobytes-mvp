@@ -46,27 +46,51 @@ export async function POST(req: Request) {
     }
   })
 
-  // 2. Mock AI Extraction (Seed some dummy metrics based on random logic)
+  // 2. Mock AI Extraction
   const biomarkers = await prisma.biomarkerDefinition.findMany()
   
-  // Pick a few biomarkers to extract randomly
-  const extracted = biomarkers.slice(0, 4).map(b => {
-    // Random value near the reference range
-    const min = b.refMin || 10
-    const max = b.refMax || 100
-    const val = min + Math.random() * (max - min) * 1.5 // 50% chance of being abnormal
-    const isAbnormal = val < min || val > max
-    
-    return {
-      reportId: report.id,
-      biomarkerId: b.id,
-      value: parseFloat(val.toFixed(1)),
-      unit: b.unit,
-      refMin: b.refMin,
-      refMax: b.refMax,
-      isAbnormal
+  let extracted: any[] = []
+  
+  const isDrLalDemo = file.name.toLowerCase().includes("lal") || file.name.toLowerCase().includes("pathlab")
+  
+  if (isDrLalDemo) {
+    // Specifically extract Hemoglobin, RBC, Fasting Sugar as requested for Dr. Lal PathLabs Demo
+    const hemo = biomarkers.find(b => b.code === 'HEMOGLOBIN')
+    const rbc = biomarkers.find(b => b.code === 'RBC')
+    const sugar = biomarkers.find(b => b.code === 'GLUCOSE_FASTING')
+
+    if (hemo && rbc && sugar) {
+      extracted = [
+        { reportId: report.id, biomarkerId: hemo.id, value: 11.2, unit: hemo.unit, refMin: hemo.refMin, refMax: hemo.refMax, isAbnormal: 11.2 < (hemo.refMin || 0) },
+        { reportId: report.id, biomarkerId: rbc.id, value: 3.9, unit: rbc.unit, refMin: rbc.refMin, refMax: rbc.refMax, isAbnormal: 3.9 < (rbc.refMin || 0) },
+        { reportId: report.id, biomarkerId: sugar.id, value: 115, unit: sugar.unit, refMin: sugar.refMin, refMax: sugar.refMax, isAbnormal: 115 > (sugar.refMax || 100) },
+      ]
     }
-  })
+    
+    await prisma.report.update({
+      where: { id: report.id },
+      data: { labName: "Dr. Lal PathLabs" }
+    })
+  } else {
+    // Pick a few biomarkers to extract randomly
+    extracted = biomarkers.slice(0, 4).map(b => {
+      // Random value near the reference range
+      const min = b.refMin || 10
+      const max = b.refMax || 100
+      const val = min + Math.random() * (max - min) * 1.5 // 50% chance of being abnormal
+      const isAbnormal = val < min || val > max
+      
+      return {
+        reportId: report.id,
+        biomarkerId: b.id,
+        value: parseFloat(val.toFixed(1)),
+        unit: b.unit,
+        refMin: b.refMin,
+        refMax: b.refMax,
+        isAbnormal
+      }
+    })
+  }
 
   await prisma.extractedMetric.createMany({
     data: extracted

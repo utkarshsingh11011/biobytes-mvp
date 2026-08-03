@@ -21,7 +21,6 @@ export default function LoginPage() {
     e.preventDefault()
     setLoading(true)
     setError("")
-
     const res = await signIn("credentials", {
       email,
       password,
@@ -33,6 +32,28 @@ export default function LoginPage() {
       setLoading(false)
     } else {
       router.push("/patient/dashboard")
+      router.refresh()
+    }
+  }
+
+  const demoLogin = async (role: "patient" | "doctor") => {
+    setLoading(true)
+    setError("")
+    
+    const demoEmail = role === "patient" ? "priya@demo.com" : "doctor@demo.com"
+    const demoPassword = "demo1234"
+
+    const res = await signIn("credentials", {
+      email: demoEmail,
+      password: demoPassword,
+      redirect: false,
+    })
+
+    if (res?.error) {
+      setError("Demo account login failed. Please ensure the database is seeded.")
+      setLoading(false)
+    } else {
+      router.push(role === "patient" ? "/patient/dashboard" : "/doctor/dashboard")
       router.refresh()
     }
   }
@@ -83,11 +104,19 @@ export default function LoginPage() {
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? "Signing in..." : "Sign in"}
               </Button>
-              <div className="text-sm text-center text-muted-foreground">
-                Demo accounts: <br/>
-                <span className="font-medium text-foreground">priya@demo.com / demo1234</span>
-                <br/>
-                <span className="font-medium text-foreground">admin@biobytes.in / admin1234</span>
+              <div className="relative flex items-center py-2">
+                <div className="flex-grow border-t border-muted"></div>
+                <span className="flex-shrink-0 mx-4 text-muted-foreground text-xs uppercase">Or</span>
+                <div className="flex-grow border-t border-muted"></div>
+              </div>
+              <Button type="button" variant="outline" className="w-full bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200" onClick={() => demoLogin("patient")} disabled={loading}>
+                Login as Demo Patient
+              </Button>
+              <Button type="button" variant="outline" className="w-full bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200" onClick={() => demoLogin("doctor")} disabled={loading}>
+                Login as Demo Doctor
+              </Button>
+              <div className="text-xs text-center text-muted-foreground mt-4">
+                Admin: admin@biobytes.in / admin1234
               </div>
             </CardFooter>
           </form>

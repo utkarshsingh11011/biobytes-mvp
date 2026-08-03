@@ -1,0 +1,197 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Calendar as CalendarIcon, Clock, User, CheckCircle2 } from "lucide-react"
+
+export default function PatientAppointmentsPage() {
+  const [doctors, setDoctors] = useState<any[]>([])
+  const [appointments, setAppointments] = useState<any[]>([])
+  const [loading, setLoading] = useState(false)
+  const [fetching, setFetching] = useState(true)
+  
+  const [form, setForm] = useState({
+    doctorId: "",
+    date: "",
+    time: "",
+    preUploadData: false
+  })
+
+  useEffect(() => {
+    fetchData()
+  }, [])
+
+  const fetchData = async () => {
+    try {
+      const [docRes, apptRes] = await Promise.all([
+        fetch("/api/doctors"),
+        fetch("/api/appointments")
+      ])
+      if (docRes.ok) setDoctors(await docRes.json())
+      if (apptRes.ok) setAppointments(await apptRes.json())
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setFetching(false)
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    try {
+      const res = await fetch("/api/appointments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form)
+      })
+      if (res.ok) {
+        setForm({ doctorId: "", date: "", time: "", preUploadData: false })
+        fetchData()
+      }
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Appointments</h1>
+        <p className="text-muted-foreground">Book and manage your doctor consultations.</p>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Book New Appointment</CardTitle>
+            <CardDescription>Schedule a visit with our partnered doctors.</CardDescription>
+          </CardHeader>
+          <form onSubmit={handleSubmit}>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Select Doctor</label>
+                <select 
+                  className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={form.doctorId}
+                  onChange={e => setForm({...form, doctorId: e.target.value})}
+                  required
+                >
+                  <option value="" disabled>Choose a doctor...</option>
+                  {doctors.map(d => (
+                    <option key={d.id} value={d.id}>
+                      {d.name} ({d.doctorProfile?.specialization || "General"})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Date</label>
+                  <div className="relative">
+                    <CalendarIcon className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                      type="date" 
+                      className="pl-9"
+                      value={form.date}
+                      onChange={e => setForm({...form, date: e.target.value})}
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Time</label>
+                  <div className="relative">
+                    <Clock className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                      type="time" 
+                      className="pl-9"
+                      value={form.time}
+                      onChange={e => setForm({...form, time: e.target.value})}
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2 pt-2">
+                <input 
+                  type="checkbox" 
+                  id="preupload"
+                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                  checked={form.preUploadData}
+                  onChange={e => setForm({...form, preUploadData: e.target.checked})}
+                />
+                <label htmlFor="preupload" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                  Generate & Share E-Health PIN automatically
+                </label>
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Button type="submit" className="w-full" disabled={loading || fetching}>
+                {loading ? "Booking..." : "Confirm Appointment"}
+              </Button>
+            </CardFooter>
+          </form>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Upcoming Appointments</CardTitle>
+            <CardDescription>Your scheduled consultations.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {fetching ? (
+              <div className="flex justify-center p-4"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>
+            ) : appointments.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
+                No upcoming appointments.
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {appointments.map(appt => (
+                  <div key={appt.id} className="flex flex-col space-y-2 p-4 border rounded-lg bg-card">
+                    <div className="flex justify-between items-start">
+                      <div className="flex items-center space-x-2">
+                        <div className="bg-primary/10 p-2 rounded-full">
+                          <User className="h-4 w-4 text-primary" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm">{appt.doctor?.name}</p>
+                          <p className="text-xs text-muted-foreground">Status: <span className="text-primary font-medium">{appt.status}</span></p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground pt-2 border-t">
+                      <div className="flex items-center">
+                        <CalendarIcon className="mr-2 h-3 w-3" />
+                        {new Date(appt.scheduledTime).toLocaleDateString()}
+                      </div>
+                      <div className="flex items-center">
+                        <Clock className="mr-2 h-3 w-3" />
+                        {new Date(appt.scheduledTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                    </div>
+                    
+                    {appt.accessCode && (
+                      <div className="mt-2 bg-emerald-50 text-emerald-700 text-xs px-3 py-2 rounded flex items-center border border-emerald-100">
+                        <CheckCircle2 className="h-3 w-3 mr-2" />
+                        Shared E-Health PIN: <strong className="ml-1 tracking-widest">{appt.accessCode}</strong>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  )
+}
