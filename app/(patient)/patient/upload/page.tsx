@@ -38,7 +38,7 @@ export default function UploadPage() {
         router.refresh()
       } else {
         const errorData = await res.json().catch(() => ({}))
-        setError(errorData.error || "Upload failed. Please try again.")
+        setError(errorData.error || `Upload failed (Status ${res.status}). Please try a smaller file or check Vercel logs.`)
       }
     } catch (err) {
       setError("An error occurred during upload.")
