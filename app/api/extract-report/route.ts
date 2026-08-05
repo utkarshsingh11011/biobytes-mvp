@@ -35,7 +35,8 @@ export async function POST(req: Request) {
       if (typeof pdfData === 'string') {
         extractedText = pdfData
       } else if (pdfData && typeof pdfData === 'object' && 'text' in pdfData) {
-        extractedText = (pdfData as any).text || ""
+        const textObj = (pdfData as any).text
+        extractedText = Array.isArray(textObj) ? textObj.join('\n') : (textObj || "")
       } else if (Array.isArray(pdfData as any)) {
         extractedText = (pdfData as any).join('\n')
       }
@@ -44,6 +45,10 @@ export async function POST(req: Request) {
       extractedText = result.data.text
     } else {
       return NextResponse.json({ error: "Unsupported file type. Please upload a PDF, JPG, or PNG." }, { status: 400 })
+    }
+
+    if (typeof extractedText !== 'string') {
+      extractedText = String(extractedText)
     }
 
     if (!extractedText.trim()) {
