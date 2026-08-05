@@ -19,7 +19,6 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   }
 
   try {
-    // Get the target appointment
     const targetAppointment = await prisma.appointment.findUnique({
       where: { id }
     })
@@ -28,28 +27,39 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       return NextResponse.json({ error: "Appointment not found" }, { status: 404 })
     }
 
-    // Only ACCEPTED appointments count in the active queue
-    if (targetAppointment.status !== "ACCEPTED") {
+    if (targetAppointment.status === "REJECTED" || targetAppointment.status === "CHECKED") {
       return NextResponse.json({ position: 0, status: targetAppointment.status })
     }
 
-    // Calculate queue position by counting ACCEPTED appointments for the same doctor, 
-    // on the same day, with an earlier time.
-    // For simplicity, we just count all ACCEPTED appointments scheduled before this one
-    // since past un-checked appointments still count as active in the queue.
-    const position = await prisma.appointment.count({
+    // Get start and end of the day for the scheduled time
+    const startOfDay = new Date(targetAppointment.scheduledTime)
+    startOfDay.setHours(0, 0, 0, 0)
+    
+    const endOfDay = new Date(targetAppointment.scheduledTime)
+    endOfDay.setHours(23, 59, 59, 999)
+
+    // Fetch all active appointments for this doctor on the same day
+    const activeAppointments = await prisma.appointment.findMany({
       where: {
         doctorId: targetAppointment.doctorId,
-        status: "ACCEPTED",
+        status: { in: ["PENDING", "ACCEPTED"] },
         scheduledTime: {
-          lt: targetAppointment.scheduledTime
+          gte: startOfDay,
+          lte: endOfDay
         }
-      }
+      },
+      orderBy: [
+        { scheduledTime: 'asc' },
+        { createdAt: 'asc' }
+      ]
     })
 
-    // Queue position is the count of people ahead of you + 1 (you)
+    // Find position (index + 1)
+    const positionIndex = activeAppointments.findIndex(appt => appt.id === id)
+    const position = positionIndex !== -1 ? positionIndex + 1 : 0
+
     return NextResponse.json({ 
-      position: position + 1,
+      position,
       status: targetAppointment.status 
     })
 

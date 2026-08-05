@@ -27,12 +27,12 @@ function QueueStatusBadge({ appointmentId }: { appointmentId: string }) {
     return () => clearInterval(interval)
   }, [appointmentId])
 
-  if (position === null) return <span className="text-xs animate-pulse">Loading queue...</span>
+  if (position === null) return <span className="text-xs animate-pulse">Calculating queue...</span>
   
   return (
     <div className="flex items-center space-x-1 text-sm font-semibold text-primary bg-primary/10 px-2 py-1 rounded-md animate-in fade-in">
       <Activity className="h-4 w-4 mr-1 animate-pulse" />
-      Live Queue: #{position} in line
+      Queue: #{position} in line
     </div>
   )
 }
@@ -136,16 +136,26 @@ export default function PatientAppointmentsPage() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Time</label>
+                  <label className="text-sm font-medium">Time Slot (Hourly)</label>
                   <div className="relative">
                     <Clock className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      type="time" 
-                      className="pl-9"
+                    <select 
+                      className="flex h-10 w-full pl-9 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm"
                       value={form.time}
                       onChange={e => setForm({...form, time: e.target.value})}
                       required
-                    />
+                    >
+                      <option value="" disabled>Select a time...</option>
+                      <option value="09:00">09:00 AM</option>
+                      <option value="10:00">10:00 AM</option>
+                      <option value="11:00">11:00 AM</option>
+                      <option value="12:00">12:00 PM</option>
+                      <option value="13:00">01:00 PM</option>
+                      <option value="14:00">02:00 PM</option>
+                      <option value="15:00">03:00 PM</option>
+                      <option value="16:00">04:00 PM</option>
+                      <option value="17:00">05:00 PM</option>
+                    </select>
                   </div>
                 </div>
               </div>
@@ -198,8 +208,8 @@ export default function PatientAppointmentsPage() {
                         </div>
                       </div>
                       
-                      {appt.status === "ACCEPTED" && (
-                        <div className="flex items-center">
+                      {(appt.status === "ACCEPTED" || appt.status === "PENDING") && (
+                        <div className="flex items-center mt-2 sm:mt-0">
                           <QueueStatusBadge appointmentId={appt.id} />
                         </div>
                       )}

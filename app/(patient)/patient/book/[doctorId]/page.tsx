@@ -114,16 +114,26 @@ export default function BookingPage() {
             </div>
             
             <div className="space-y-2">
-              <label className="text-sm font-medium">Time</label>
+              <label className="text-sm font-medium">Time Slot (Hourly)</label>
               <div className="relative">
                 <Clock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input 
-                  type="time" 
-                  className="pl-10"
+                <select 
+                  className="flex h-10 w-full pl-10 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm"
                   value={form.time}
                   onChange={e => setForm({...form, time: e.target.value})}
                   required
-                />
+                >
+                  <option value="" disabled>Select a time...</option>
+                  <option value="09:00">09:00 AM</option>
+                  <option value="10:00">10:00 AM</option>
+                  <option value="11:00">11:00 AM</option>
+                  <option value="12:00">12:00 PM</option>
+                  <option value="13:00">01:00 PM</option>
+                  <option value="14:00">02:00 PM</option>
+                  <option value="15:00">03:00 PM</option>
+                  <option value="16:00">04:00 PM</option>
+                  <option value="17:00">05:00 PM</option>
+                </select>
               </div>
             </div>
 
