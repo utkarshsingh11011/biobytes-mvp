@@ -21,8 +21,8 @@ export async function POST(req: Request) {
   const scheduledTime = new Date(`${date}T${time}`)
 
   try {
-    // Enforce unique hourly slot constraint per doctor per day
-    const existingAppt = await prisma.appointment.findFirst({
+    // Enforce max 10 patients per hourly slot per doctor per day
+    const existingApptsCount = await prisma.appointment.count({
       where: {
         doctorId,
         scheduledTime,
@@ -30,8 +30,8 @@ export async function POST(req: Request) {
       }
     })
 
-    if (existingAppt) {
-      return NextResponse.json({ error: "This time slot is already booked for this doctor. Please choose another." }, { status: 409 })
+    if (existingApptsCount >= 10) {
+      return NextResponse.json({ error: "This time slot is fully booked (10/10 patients). Please choose another." }, { status: 409 })
     }
     let accessCode = null
     
