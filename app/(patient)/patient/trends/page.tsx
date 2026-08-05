@@ -163,8 +163,8 @@ export default function TrendsPage() {
                   Reference Range: {trend.refMin} - {trend.refMax} {trend.unit}
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="h-[300px] w-full">
+              <CardContent className="overflow-x-auto overflow-y-hidden w-full">
+                <div className="h-[300px] min-w-[600px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart
                       data={trend.data}
