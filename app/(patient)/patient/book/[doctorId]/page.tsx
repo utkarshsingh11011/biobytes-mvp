@@ -55,7 +55,8 @@ export default function BookingPage() {
       if (res.ok) {
         router.push("/patient/appointments")
       } else {
-        alert("Failed to book appointment.")
+        const errorData = await res.json()
+        alert(`Failed to book appointment: ${errorData.error || 'Unknown error'}`)
       }
     } catch (e) {
       console.error(e)

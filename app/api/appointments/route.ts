@@ -19,43 +19,48 @@ export async function POST(req: Request) {
   }
 
   const scheduledTime = new Date(`${date}T${time}`)
-  let accessCode = null
-
-  if (preUploadData) {
-    // Revoke old codes and generate a new one
-    await prisma.doctorAccessCode.updateMany({
-      where: { patientId: session.user.id, isRevoked: false },
-      data: { isRevoked: true }
-    })
+  try {
+    let accessCode = null
     
-    const chars = '0123456789'
-    let result = ''
-    for (let i = 0; i < 6; i++) result += chars.charAt(Math.floor(Math.random() * chars.length))
-    accessCode = result
+    if (preUploadData) {
+      // Revoke old codes and generate a new one
+      await prisma.doctorAccessCode.updateMany({
+        where: { patientId: session.user.id, isRevoked: false },
+        data: { isRevoked: true }
+      })
+      
+      const chars = '0123456789'
+      let result = ''
+      for (let i = 0; i < 6; i++) result += chars.charAt(Math.floor(Math.random() * chars.length))
+      accessCode = result
 
-    const expiresAt = new Date(scheduledTime)
-    expiresAt.setHours(expiresAt.getHours() + 48) // valid until 48h after appointment
+      const expiresAt = new Date(scheduledTime)
+      expiresAt.setHours(expiresAt.getHours() + 48) // valid until 48h after appointment
 
-    await prisma.doctorAccessCode.create({
+      await prisma.doctorAccessCode.create({
+        data: {
+          patientId: session.user.id,
+          code: accessCode,
+          expiresAt,
+          maxUses: 10
+        }
+      })
+    }
+
+    const appointment = await prisma.appointment.create({
       data: {
         patientId: session.user.id,
-        code: accessCode,
-        expiresAt,
-        maxUses: 10
+        doctorId,
+        scheduledTime,
+        accessCode
       }
     })
+
+    return NextResponse.json({ success: true, appointment })
+  } catch (error: any) {
+    console.error("Booking API Error:", error)
+    return NextResponse.json({ error: error.message || "Internal Server Error" }, { status: 500 })
   }
-
-  const appointment = await prisma.appointment.create({
-    data: {
-      patientId: session.user.id,
-      doctorId,
-      scheduledTime,
-      accessCode
-    }
-  })
-
-  return NextResponse.json({ success: true, appointment })
 }
 
 export async function GET(req: Request) {

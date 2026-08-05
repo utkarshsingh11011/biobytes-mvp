@@ -81,6 +81,9 @@ export default function PatientAppointmentsPage() {
       if (res.ok) {
         setForm({ doctorId: "", date: "", time: "", preUploadData: false })
         fetchData()
+      } else {
+        const errorData = await res.json()
+        alert(`Failed to book appointment: ${errorData.error || 'Unknown error'}`)
       }
     } catch (e) {
       console.error(e)
