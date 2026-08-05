@@ -1,7 +1,7 @@
 import { Navbar } from "@/components/Navbar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ActivitySquare, FileText, LineChart, ShieldCheck, Stethoscope, UploadCloud, TestTube } from "lucide-react"
+import { ActivitySquare, FileText, LineChart, ShieldCheck, Stethoscope, UploadCloud, TestTube, QrCode, ArrowRight, CheckCircle2 } from "lucide-react"
 import Link from "next/link"
 
 export default function Home() {
@@ -62,6 +62,54 @@ export default function Home() {
                   <p className="text-sm text-muted-foreground">{step.desc}</p>
                 </div>
               ))}
+            </div>
+          </div>
+        </section>
+
+        {/* QR Code Feature Marketing */}
+        <section className="w-full py-24 bg-primary text-primary-foreground relative overflow-hidden">
+          <div className="absolute inset-0 bg-[url('/noise.png')] opacity-5 mix-blend-overlay"></div>
+          <div className="container px-4 md:px-6 max-w-6xl mx-auto relative z-10">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+              <div className="space-y-6">
+                <div className="inline-flex items-center rounded-full border border-primary-foreground/30 bg-primary-foreground/10 px-3 py-1 text-sm font-medium">
+                  <span className="flex h-2 w-2 rounded-full bg-emerald-400 mr-2 animate-pulse"></span>
+                  New Feature
+                </div>
+                <h2 className="text-4xl md:text-5xl font-bold tracking-tight">
+                  Instant Hospital Queuing via QR Code.
+                </h2>
+                <p className="text-primary-foreground/80 text-lg md:text-xl max-w-[600px] leading-relaxed">
+                  No more crowded waiting rooms. Patients can simply scan a unique QR code in your hospital lobby to instantly join the doctor's live digital queue.
+                </p>
+                <ul className="space-y-3 pt-4">
+                  <li className="flex items-center"><CheckCircle2 className="h-5 w-5 mr-3 text-emerald-400" /> Real-time queue tracking on patient phones</li>
+                  <li className="flex items-center"><CheckCircle2 className="h-5 w-5 mr-3 text-emerald-400" /> Digital queue management for doctors</li>
+                  <li className="flex items-center"><CheckCircle2 className="h-5 w-5 mr-3 text-emerald-400" /> Free infrastructure for partner hospitals</li>
+                </ul>
+                <div className="pt-6">
+                  <Link href="/login">
+                    <Button size="lg" className="bg-white text-primary hover:bg-slate-100 font-semibold h-12 px-8 rounded-full">
+                      Try the Demo <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+              
+              <div className="flex justify-center lg:justify-end">
+                <div className="relative w-full max-w-sm rounded-2xl glass-panel bg-white/10 border-white/20 p-8 shadow-2xl backdrop-blur-md transform rotate-2 hover:rotate-0 transition-transform duration-500">
+                  <div className="absolute -top-6 -left-6 bg-emerald-500 p-4 rounded-2xl shadow-lg transform -rotate-12">
+                    <QrCode className="h-10 w-10 text-white" />
+                  </div>
+                  <div className="bg-white p-6 rounded-xl aspect-square flex items-center justify-center shadow-inner">
+                    <QrCode className="w-full h-full text-slate-800 opacity-80" />
+                  </div>
+                  <div className="mt-6 text-center">
+                    <h3 className="text-xl font-bold text-white">Scan to Book</h3>
+                    <p className="text-primary-foreground/70 text-sm mt-1">Dr. Sarah Jenkins • Cardiology</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </section>

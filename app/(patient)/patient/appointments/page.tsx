@@ -4,7 +4,38 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Calendar as CalendarIcon, Clock, User, CheckCircle2 } from "lucide-react"
+import { Calendar as CalendarIcon, Clock, User, CheckCircle2, Activity } from "lucide-react"
+
+function QueueStatusBadge({ appointmentId }: { appointmentId: string }) {
+  const [position, setPosition] = useState<number | null>(null)
+
+  useEffect(() => {
+    const fetchQueue = async () => {
+      try {
+        const res = await fetch(`/api/appointments/queue/${appointmentId}`)
+        if (res.ok) {
+          const data = await res.json()
+          setPosition(data.position)
+        }
+      } catch (e) {
+        console.error(e)
+      }
+    }
+    
+    fetchQueue()
+    const interval = setInterval(fetchQueue, 15000) // Poll every 15 seconds
+    return () => clearInterval(interval)
+  }, [appointmentId])
+
+  if (position === null) return <span className="text-xs animate-pulse">Loading queue...</span>
+  
+  return (
+    <div className="flex items-center space-x-1 text-sm font-semibold text-primary bg-primary/10 px-2 py-1 rounded-md animate-in fade-in">
+      <Activity className="h-4 w-4 mr-1 animate-pulse" />
+      Live Queue: #{position} in line
+    </div>
+  )
+}
 
 export default function PatientAppointmentsPage() {
   const [doctors, setDoctors] = useState<any[]>([])
@@ -166,6 +197,12 @@ export default function PatientAppointmentsPage() {
                           <p className="text-xs text-muted-foreground">Status: <span className="text-primary font-medium">{appt.status}</span></p>
                         </div>
                       </div>
+                      
+                      {appt.status === "ACCEPTED" && (
+                        <div className="flex items-center">
+                          <QueueStatusBadge appointmentId={appt.id} />
+                        </div>
+                      )}
                     </div>
                     
                     <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground pt-2 border-t">
