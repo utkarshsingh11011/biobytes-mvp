@@ -90,9 +90,28 @@ export async function POST(req: Request) {
     
     if (reportDateMatch && reportDateMatch[1]) {
       try {
-        // Standardize separators to spaces for better JS parsing
-        const dateStr = reportDateMatch[1].replace(/[\/\-]/g, ' ')
-        const parsedDate = new Date(dateStr)
+        let dateStr = reportDateMatch[1].replace(/[\/\-]/g, ' ').replace(/,/g, '').trim()
+        let parsedDate: Date
+        
+        const parts = dateStr.split(/\s+/)
+        if (parts.length === 3 && !isNaN(Number(parts[0])) && !isNaN(Number(parts[1])) && !isNaN(Number(parts[2]))) {
+           let p1 = parts[0]
+           let p2 = parts[1]
+           let p3 = parts[2]
+           
+           if (p1.length === 4) {
+             // YYYY MM DD
+             parsedDate = new Date(`${p1}-${p2.padStart(2, '0')}-${p3.padStart(2, '0')}T00:00:00Z`)
+           } else {
+             // DD MM YYYY
+             let year = p3
+             if (year.length === 2) year = "20" + year
+             parsedDate = new Date(`${year}-${p2.padStart(2, '0')}-${p1.padStart(2, '0')}T00:00:00Z`)
+           }
+        } else {
+           parsedDate = new Date(dateStr)
+        }
+
         if (!isNaN(parsedDate.getTime())) {
           parsedData.report_date = parsedDate.toISOString().split('T')[0]
         }
