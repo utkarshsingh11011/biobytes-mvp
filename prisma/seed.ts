@@ -68,6 +68,16 @@ async function main() {
     }
   })
 
+  const tejasHash = await hash('demo1234', 10)
+  const tejas = await prisma.user.create({
+    data: {
+      email: 'tejas@demo.com',
+      passwordHash: tejasHash,
+      name: 'Tejas Vishwakarma',
+      role: 'PATIENT',
+    }
+  })
+
   const adminHash = await hash('admin1234', 10)
   const admin = await prisma.user.create({
     data: {
