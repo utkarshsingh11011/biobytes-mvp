@@ -5,13 +5,15 @@ import { PrismaClient } from "@prisma/client"
 
 const prisma = new PrismaClient()
 
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions)
   if (!session) {
     return new Response("Unauthorized", { status: 401 })
   }
 
-  const { id } = params
+  const resolvedParams = await params
+  const id = resolvedParams.id
+  
   if (!id) {
     return NextResponse.json({ error: "Missing appointment ID" }, { status: 400 })
   }
