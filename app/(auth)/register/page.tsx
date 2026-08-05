@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Activity } from "lucide-react"
@@ -14,6 +14,13 @@ export default function RegisterPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [num1, setNum1] = useState(0)
+  const [num2, setNum2] = useState(0)
+
+  useEffect(() => {
+    setNum1(Math.floor(Math.random() * 10) + 1)
+    setNum2(Math.floor(Math.random() * 10) + 1)
+  }, [])
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -25,6 +32,20 @@ export default function RegisterPage() {
     const email = formData.get("email") as string
     const password = formData.get("password") as string
     const role = formData.get("role") as string
+    const botCheck = formData.get("bot_check") as string
+    const mathAnswer = formData.get("math_answer") as string
+
+    if (botCheck) {
+      setError("Bot activity detected.")
+      setLoading(false)
+      return
+    }
+
+    if (parseInt(mathAnswer) !== num1 + num2) {
+      setError("Incorrect math answer. Please try again.")
+      setLoading(false)
+      return
+    }
 
     try {
       const res = await fetch("/api/register", {
@@ -32,7 +53,7 @@ export default function RegisterPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ name, email, password, role }),
+        body: JSON.stringify({ name, email, password, role, botCheck, mathAnswer: parseInt(mathAnswer), num1, num2 }),
       })
 
       const data = await res.json()
@@ -101,6 +122,27 @@ export default function RegisterPage() {
                   <option value="PATIENT">Patient</option>
                   <option value="DOCTOR">Doctor</option>
                 </select>
+              </div>
+              
+              {/* Bot Verification: Honeypot (Hidden from real users) */}
+              <div className="opacity-0 absolute -z-10 h-0 w-0 overflow-hidden" aria-hidden="true">
+                <label htmlFor="bot_check">Leave this field empty if you are human</label>
+                <Input id="bot_check" name="bot_check" type="text" tabIndex={-1} autoComplete="off" />
+              </div>
+
+              {/* Bot Verification: Math Challenge */}
+              <div className="space-y-2 p-3 bg-slate-100 dark:bg-slate-900 rounded-md border">
+                <label className="text-sm font-medium leading-none" htmlFor="math_answer">
+                  Security Check: What is {num1} + {num2}?
+                </label>
+                <Input 
+                  id="math_answer" 
+                  name="math_answer" 
+                  type="number" 
+                  placeholder="Enter answer" 
+                  required 
+                  disabled={loading} 
+                />
               </div>
             </CardContent>
             <CardFooter className="flex flex-col space-y-4">

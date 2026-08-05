@@ -6,10 +6,20 @@ const prisma = new PrismaClient()
 
 export async function POST(req: Request) {
   try {
-    const { name, email, password, role } = await req.json()
+    const { name, email, password, role, botCheck, mathAnswer, num1, num2 } = await req.json()
 
     if (!name || !email || !password) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
+    }
+
+    // Bot Verification: Honeypot Check
+    if (botCheck) {
+      return NextResponse.json({ error: "Bot activity detected. Registration blocked." }, { status: 403 })
+    }
+
+    // Bot Verification: Math Challenge Check
+    if (typeof mathAnswer !== "number" || typeof num1 !== "number" || typeof num2 !== "number" || mathAnswer !== num1 + num2) {
+      return NextResponse.json({ error: "Security challenge failed. Incorrect math answer." }, { status: 403 })
     }
 
     // Check if user already exists
