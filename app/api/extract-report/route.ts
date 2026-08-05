@@ -65,10 +65,11 @@ export async function POST(req: Request) {
     }
 
     // Try to extract patient name
-    const nameMatch = extractedText.match(/(?:name|patient name|patient)\s*[:\-]?\s*([A-Za-z\s]+)/i)
+    const nameMatch = extractedText.match(/(?:name|patient name|patient)\s*[:\-]?\s*([A-Za-z\s\.]+)/i)
     if (nameMatch && nameMatch[1]) {
-      // Take only the first 30 chars in case it over-matched
-      parsedData.patient_name = nameMatch[1].trim().substring(0, 30)
+      let rawName = nameMatch[1].trim().substring(0, 50)
+      rawName = rawName.replace(/^(mr\.|mrs\.|ms\.|dr\.|mr|mrs|ms|dr)\s+/i, '').trim()
+      parsedData.patient_name = rawName
     }
 
     const extractBiomarker = (regexes: RegExp[], name: string, unit: string) => {
@@ -125,17 +126,17 @@ export async function POST(req: Request) {
     ], "Calcium", "mg/dL")
 
     // Identity Verification
-    const reportPatientName = (parsedData.patient_name || "").toLowerCase()
+    let reportPatientName = (parsedData.patient_name || "").toLowerCase()
     const accountPatientName = (session.user.name || "").toLowerCase()
     
-    // Check if there is any overlap in the names (e.g. "Sankalp Verma" vs "Sankalp")
     if (reportPatientName && accountPatientName) {
+      reportPatientName = reportPatientName.replace(/^(mr\.|mrs\.|ms\.|dr\.|mr|mrs|ms|dr)\s+/i, '')
       const reportNameParts = reportPatientName.split(" ").filter(Boolean)
-      const isMatch = reportNameParts.some((part: string) => accountPatientName.includes(part))
+      const isMatch = reportNameParts.some((part: string) => accountPatientName.includes(part) && part.length > 2)
       
       if (!isMatch) {
         return NextResponse.json({ 
-          error: `Identity mismatch. The report belongs to "${parsedData.patient_name}", but this account belongs to "${session.user.name}". For security, this upload was blocked.` 
+          error: `Identity mismatch. The report belongs to "${parsedData.patient_name || reportPatientName}", but this account belongs to "${session.user.name}". For security, this upload was blocked.` 
         }, { status: 403 })
       }
     }
