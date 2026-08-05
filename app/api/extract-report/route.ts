@@ -3,15 +3,7 @@ import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth"
 import { PrismaClient } from "@prisma/client"
 import Tesseract from "tesseract.js"
-
-// Polyfill DOMMatrix for pdf-parse in Next.js Serverless environments
-if (typeof global !== "undefined" && !(global as any).DOMMatrix) {
-  (global as any).DOMMatrix = class DOMMatrix {
-    constructor() {}
-  }
-}
-
-const pdfParse = require("pdf-parse")
+import { extractText, getDocumentProxy } from "unpdf"
 
 const prisma = new PrismaClient()
 
@@ -38,8 +30,15 @@ export async function POST(req: Request) {
     let extractedText = ""
 
     if (mimeType === "application/pdf") {
-      const pdfData = await pdfParse(buffer)
-      extractedText = pdfData.text
+      const uint8Array = new Uint8Array(buffer)
+      const pdfData = await extractText(uint8Array)
+      if (typeof pdfData === 'string') {
+        extractedText = pdfData
+      } else if (pdfData && typeof pdfData === 'object' && 'text' in pdfData) {
+        extractedText = (pdfData as any).text || ""
+      } else if (Array.isArray(pdfData as any)) {
+        extractedText = (pdfData as any).join('\n')
+      }
     } else if (mimeType.startsWith("image/")) {
       const result = await Tesseract.recognize(buffer, "eng")
       extractedText = result.data.text
