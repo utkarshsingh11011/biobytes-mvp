@@ -81,6 +81,15 @@ export async function POST(req: Request) {
       parsedData.patient_name = rawName
     }
 
+    // Variables for UserHealthRecord legacy table
+    let hr_hemoglobin: number | null = null;
+    let hr_fasting_blood_sugar: number | null = null;
+    let hr_total_cholesterol: number | null = null;
+    let hr_thyroid_tsh: number | null = null;
+    let hr_vitamin_d: number | null = null;
+    let hr_vitamin_b12: number | null = null;
+    let hr_calcium: number | null = null;
+
     const extractBiomarker = (regexes: RegExp[], name: string, unit: string) => {
       for (const regex of regexes) {
         const match = extractedText.match(regex)
@@ -91,48 +100,57 @@ export async function POST(req: Request) {
               name,
               value,
               unit,
-              isAbnormal: false // Can't easily regex ref ranges, we will let default db schema handle or default to false
+              isAbnormal: false
             })
-            break
+            return value;
           }
         }
       }
+      return null;
     }
 
     // HEMOGLOBIN
-    extractBiomarker([
-      /(?:hemoglobin|hb|haemoglobin)[\s\:]+([\d\.]+)/i,
+    hr_hemoglobin = extractBiomarker([
+      /(?:hemoglobin|hb|haemoglobin)[^\d\n]*([\d\.]+)/i,
     ], "Hemoglobin", "g/dL")
 
     // FASTING SUGAR
-    extractBiomarker([
-      /(?:fasting blood sugar|fbs|fasting plasma glucose|fpg)[\s\:]+([\d\.]+)/i,
+    hr_fasting_blood_sugar = extractBiomarker([
+      /(?:fasting blood sugar|fbs|fasting plasma glucose|fpg)[^\d\n]*([\d\.]+)/i,
     ], "Fasting Blood Sugar", "mg/dL")
 
     // CHOLESTEROL
-    extractBiomarker([
-      /(?:total cholesterol|cholesterol total|cholesterol)[\s\:]+([\d\.]+)/i,
+    hr_total_cholesterol = extractBiomarker([
+      /(?:total cholesterol|cholesterol total|cholesterol)[^\d\n]*([\d\.]+)/i,
     ], "Total Cholesterol", "mg/dL")
 
     // TSH
-    extractBiomarker([
-      /(?:tsh|thyroid stimulating hormone)[\s\:]+([\d\.]+)/i,
+    hr_thyroid_tsh = extractBiomarker([
+      /(?:tsh|thyroid stimulating hormone)[^\d\n]*([\d\.]+)/i,
     ], "Thyroid TSH", "uIU/mL")
 
     // VITAMIN D
-    extractBiomarker([
-      /(?:vitamin d|vit d|25-oh vitamin d)[\s\:]+([\d\.]+)/i,
+    hr_vitamin_d = extractBiomarker([
+      /(?:vitamin d|vit d|25-oh vitamin d)[^\d\n]*([\d\.]+)/i,
     ], "Vitamin D", "ng/mL")
 
     // VITAMIN B12
-    extractBiomarker([
-      /(?:vitamin b12|vit b12)[\s\:]+([\d\.]+)/i,
+    hr_vitamin_b12 = extractBiomarker([
+      /(?:vitamin b12|vit b12)[^\d\n]*([\d\.]+)/i,
     ], "Vitamin B12", "pg/mL")
 
     // CALCIUM
-    extractBiomarker([
-      /(?:calcium|total calcium)[\s\:]+([\d\.]+)/i,
+    hr_calcium = extractBiomarker([
+      /(?:calcium|total calcium)[^\d\n]*([\d\.]+)/i,
     ], "Calcium", "mg/dL")
+
+    // Ensure we generate some AI Summary text so it's not empty on the dashboard
+    const abnormalities = parsedData.biomarkers.filter((b: any) => b.isAbnormal)
+    if (parsedData.biomarkers.length > 0) {
+      parsedData.overall_summary = `Successfully extracted ${parsedData.biomarkers.length} health metrics (e.g. ${parsedData.biomarkers.map((b: any) => b.name).join(", ")}). Please consult with your doctor for a detailed clinical assessment.`
+    } else {
+      parsedData.overall_summary = "Could not extract standard biomarkers. Please ensure the PDF is a standard lab report."
+    }
 
     // Identity Verification
     let reportPatientName = (parsedData.patient_name || "").toLowerCase()
@@ -225,6 +243,12 @@ export async function POST(req: Request) {
       data: {
         reportId: report.id,
         patientId: session.user.id,
+        hemoglobin: hr_hemoglobin,
+        fasting_blood_sugar: hr_fasting_blood_sugar,
+        thyroid_tsh: hr_thyroid_tsh,
+        ldl_cholesterol: hr_total_cholesterol, // Legacy mapping
+        vitamin_d: hr_vitamin_d,
+        vitamin_b12: hr_vitamin_b12
       },
     })
 
