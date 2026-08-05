@@ -3,6 +3,7 @@ import { authOptions } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import Link from "next/link"
 import { Activity, LayoutDashboard, LineChart, LogOut, UploadCloud, Calendar, HeartHandshake } from "lucide-react"
+import { BackButton } from "@/components/BackButton"
 
 export default async function PatientLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions)
@@ -16,7 +17,7 @@ export default async function PatientLayout({ children }: { children: React.Reac
       <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6">
         <Link href="/" className="flex items-center space-x-2">
           <Activity className="h-6 w-6 text-primary" />
-          <span className="font-bold text-xl tracking-tight hidden md:inline-block">BioBytes</span>
+          <span className="font-bold text-xl tracking-tight hidden md:inline-block">E-Health Tracker</span>
         </Link>
         <nav className="flex-1 flex items-center space-x-4 md:space-x-6 ml-6 overflow-x-auto">
           <Link href="/patient/dashboard" className="text-sm font-medium transition-colors hover:text-primary flex items-center whitespace-nowrap">
@@ -43,6 +44,7 @@ export default async function PatientLayout({ children }: { children: React.Reac
         </div>
       </header>
       <main className="flex-1 p-4 md:p-6 lg:p-8">
+        <BackButton />
         {children}
       </main>
     </div>

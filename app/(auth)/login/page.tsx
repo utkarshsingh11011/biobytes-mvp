@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { signIn } from "next-auth/react"
+import { BackButton } from "@/components/BackButton"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Activity } from "lucide-react"
@@ -58,21 +59,26 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900/50 p-4">
-      <div className="w-full max-w-md space-y-4">
+    <div className="flex min-h-screen flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-slate-50 dark:bg-slate-950">
+      <div className="w-full max-w-md absolute top-4 left-4">
+        <BackButton />
+      </div>
+      <div className="w-full max-w-md space-y-8">
         <div className="flex justify-center mb-8">
           <Link href="/" className="flex items-center space-x-2">
             <Activity className="h-8 w-8 text-primary" />
-            <span className="font-bold text-2xl tracking-tight">BioBytes</span>
+            <span className="font-bold text-2xl tracking-tight">E-Health Tracker</span>
           </Link>
         </div>
         
         <Card>
           <CardHeader className="space-y-1 text-center">
-            <CardTitle className="text-2xl">Sign in</CardTitle>
-            <CardDescription>
-              Enter your email and password to access your account
-            </CardDescription>
+            <CardTitle className="text-2xl font-bold tracking-tight">
+            Sign in to E-Health Tracker
+          </CardTitle>
+          <CardDescription>
+            Enter your credentials to access your portal
+          </CardDescription>
           </CardHeader>
           <form onSubmit={onSubmit}>
             <CardContent className="space-y-4">
@@ -123,6 +129,12 @@ export default function LoginPage() {
             </CardFooter>
           </form>
         </Card>
+        <div className="text-sm text-center text-muted-foreground mt-4">
+          Don't have an account?{" "}
+          <Link href="/register" className="text-primary hover:underline">
+            Sign Up
+          </Link>
+        </div>
       </div>
     </div>
   )
