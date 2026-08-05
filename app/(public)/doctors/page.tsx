@@ -12,7 +12,7 @@ export default function DoctorsPage() {
           <Stethoscope className="h-16 w-16 text-emerald-500" />
           <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl">For Doctors</h1>
           <p className="text-xl text-muted-foreground max-w-3xl">
-            Get instant context on your patients' health history without lengthy onboarding. Enter a temporary access code and see 12 months of longitudinal data in seconds.
+            Get instant context on your patients&apos; health history without lengthy onboarding. Enter a temporary access code and see 12 months of longitudinal data in seconds.
           </p>
 
           <div className="grid md:grid-cols-3 gap-8 mt-12 text-left">

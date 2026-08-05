@@ -103,7 +103,7 @@ export default async function PatientDashboard() {
           <CardContent>
             {reports.length === 0 ? (
               <div className="text-center py-6">
-                <p className="text-sm text-muted-foreground mb-4">You haven't uploaded any reports yet.</p>
+                <p className="text-sm text-muted-foreground mb-4">You haven&apos;t uploaded any reports yet.</p>
                 <Link href="/patient/upload">
                   <Button variant="outline" size="sm">Upload First Report</Button>
                 </Link>

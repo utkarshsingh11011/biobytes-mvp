@@ -19,10 +19,6 @@ export default function PatientAppointmentsPage() {
     preUploadData: false
   })
 
-  useEffect(() => {
-    fetchData()
-  }, [])
-
   const fetchData = async () => {
     try {
       const [docRes, apptRes] = await Promise.all([
@@ -37,6 +33,10 @@ export default function PatientAppointmentsPage() {
       setFetching(false)
     }
   }
+
+  useEffect(() => {
+    fetchData()
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

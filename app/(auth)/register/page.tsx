@@ -7,7 +7,6 @@ import { Activity } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { BackButton } from "@/components/BackButton"
 
@@ -80,19 +79,19 @@ export default function RegisterPage() {
                 </div>
               )}
               <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
+                <label className="text-sm font-medium leading-none" htmlFor="name">Full Name</label>
                 <Input id="name" name="name" type="text" placeholder="John Doe" required disabled={loading} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <label className="text-sm font-medium leading-none" htmlFor="email">Email</label>
                 <Input id="email" name="email" type="email" placeholder="name@example.com" required disabled={loading} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <label className="text-sm font-medium leading-none" htmlFor="password">Password</label>
                 <Input id="password" name="password" type="password" required disabled={loading} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="role">Account Type</Label>
+                <label className="text-sm font-medium leading-none" htmlFor="role">Account Type</label>
                 <select 
                   id="role" 
                   name="role" 
