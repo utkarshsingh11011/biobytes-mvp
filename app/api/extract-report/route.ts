@@ -12,8 +12,17 @@ export const maxDuration = 60 // Allow longer execution time for Vercel Serverle
 export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session || !session.user) {
+    if (!session || !session.user || !session.user.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    // Verify the user still exists in the database (handles stale JWT cookies after a DB reset)
+    const userExists = await prisma.user.findUnique({
+      where: { id: session.user.id }
+    })
+
+    if (!userExists) {
+      return NextResponse.json({ error: "Your session is invalid or the account was deleted. Please log out and log back in." }, { status: 401 })
     }
 
     const formData = await req.formData()
