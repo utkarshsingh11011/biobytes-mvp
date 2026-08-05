@@ -46,7 +46,7 @@ export async function POST(req: Request) {
           },
         },
         {
-          text: `You are an expert medical data extractor. Extract every single biomarker/test found in this lab report. 
+          text: `You are an expert medical data extractor. Extract ONLY the most common reference biomarkers/tests from this lab report (e.g. Hemoglobin, Cholesterol, Fasting Blood Sugar, Thyroid TSH, Vitamin D, Calcium). DO NOT extract minor or highly specific tests. 
           CRITICAL: DO NOT hallucinate or guess any data. Only extract values that are explicitly written on the report. 
           
           Return ONLY a JSON object with this exact structure, nothing else:
@@ -141,8 +141,37 @@ export async function POST(req: Request) {
       for (const b of parsedData.biomarkers) {
         if (!b.name || b.value === null || b.value === undefined) continue;
 
+        const BIOMARKER_MAP: Record<string, { code: string, displayName: string }> = {
+          "hemoglobin": { code: "HEMOGLOBIN", displayName: "Hemoglobin" },
+          "hb estimation": { code: "HEMOGLOBIN", displayName: "Hemoglobin" },
+          "hb": { code: "HEMOGLOBIN", displayName: "Hemoglobin" },
+          "fasting blood sugar": { code: "FASTING_SUGAR", displayName: "Fasting Blood Sugar" },
+          "fbs": { code: "FASTING_SUGAR", displayName: "Fasting Blood Sugar" },
+          "total cholesterol": { code: "CHOLESTEROL", displayName: "Total Cholesterol" },
+          "cholesterol": { code: "CHOLESTEROL", displayName: "Total Cholesterol" },
+          "tsh": { code: "TSH", displayName: "Thyroid TSH" },
+          "thyroid stimulating hormone": { code: "TSH", displayName: "Thyroid TSH" },
+          "calcium": { code: "CALCIUM", displayName: "Calcium" },
+          "vitamin d": { code: "VITAMIN_D", displayName: "Vitamin D" },
+          "vit d": { code: "VITAMIN_D", displayName: "Vitamin D" },
+          "vitamin b12": { code: "VITAMIN_B12", displayName: "Vitamin B12" },
+          "vit b12": { code: "VITAMIN_B12", displayName: "Vitamin B12" }
+        };
+
+        const cleanName = b.name.toLowerCase().trim();
+        
         // Create a canonical code (e.g. "Uric Acid" -> "URIC_ACID")
-        const code = b.name.toUpperCase().replace(/[^A-Z0-9]/g, '_');
+        let code = b.name.toUpperCase().replace(/[^A-Z0-9]/g, '_');
+        let finalDisplayName = b.name;
+
+        // Check if there's a mapped standardized version
+        for (const [key, mapping] of Object.entries(BIOMARKER_MAP)) {
+          if (cleanName.includes(key)) {
+            code = mapping.code;
+            finalDisplayName = mapping.displayName;
+            break;
+          }
+        }
 
         // Find or create BiomarkerDefinition
         let biomarkerDef = await prisma.biomarkerDefinition.findFirst({
@@ -153,7 +182,7 @@ export async function POST(req: Request) {
           biomarkerDef = await prisma.biomarkerDefinition.create({
             data: {
               code,
-              displayName: b.name,
+              displayName: finalDisplayName,
               unit: b.unit || "",
               refMin: b.refMin || null,
               refMax: b.refMax || null,
