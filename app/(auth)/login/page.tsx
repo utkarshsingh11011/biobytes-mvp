@@ -120,6 +120,9 @@ export default function LoginPage() {
               <Button type="button" variant="outline" className="w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200" onClick={() => demoLogin("utkarsh@demo.com", "/patient/dashboard")} disabled={loading}>
                 Login as Utkarsh Singh (Patient)
               </Button>
+              <Button type="button" variant="outline" className="w-full bg-cyan-50 hover:bg-cyan-100 text-cyan-700 border-cyan-200" onClick={() => demoLogin("tejas@demo.com", "/patient/dashboard")} disabled={loading}>
+                Login as Tejas Vishwakarma (Patient)
+              </Button>
               <Button type="button" variant="outline" className="w-full bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200" onClick={() => demoLogin("doctor@demo.com", "/doctor/dashboard")} disabled={loading}>
                 Login as Dr. Rahul Verma
               </Button>
