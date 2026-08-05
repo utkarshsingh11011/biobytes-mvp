@@ -3,6 +3,14 @@ import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth"
 import { PrismaClient } from "@prisma/client"
 import Tesseract from "tesseract.js"
+
+// Polyfill DOMMatrix for pdf-parse in Next.js Serverless environments
+if (typeof global !== "undefined" && !(global as any).DOMMatrix) {
+  (global as any).DOMMatrix = class DOMMatrix {
+    constructor() {}
+  }
+}
+
 const pdfParse = require("pdf-parse")
 
 const prisma = new PrismaClient()
