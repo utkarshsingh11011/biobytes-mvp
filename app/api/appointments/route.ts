@@ -19,7 +19,20 @@ export async function POST(req: Request) {
   }
 
   const scheduledTime = new Date(`${date}T${time}`)
+
   try {
+    // Enforce unique hourly slot constraint per doctor per day
+    const existingAppt = await prisma.appointment.findFirst({
+      where: {
+        doctorId,
+        scheduledTime,
+        status: { not: "REJECTED" } // Ignore cancelled/rejected appointments
+      }
+    })
+
+    if (existingAppt) {
+      return NextResponse.json({ error: "This time slot is already booked for this doctor. Please choose another." }, { status: 409 })
+    }
     let accessCode = null
     
     if (preUploadData) {
