@@ -81,6 +81,32 @@ export async function POST(req: Request) {
       parsedData.patient_name = rawName
     }
 
+    // Try to extract Report Date
+    let reportDateMatch = extractedText.match(/(?:date|registered on|collected on|collection date|reported on)[\s\:\-]*(\d{1,2}[\/\-][a-zA-Z]{3}[\/\-]\d{2,4}|\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{1,2}\s+[a-zA-Z]{3}\s+\d{2,4})/i)
+    if (!reportDateMatch) {
+      // Fallback: just find the first date looking string in the document
+      reportDateMatch = extractedText.match(/\b(\d{1,2}[\/\-][a-zA-Z]{3}[\/\-]\d{2,4}|\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{1,2}\s+[a-zA-Z]{3}\s+\d{2,4})\b/i)
+    }
+    
+    if (reportDateMatch && reportDateMatch[1]) {
+      try {
+        // Standardize separators to spaces for better JS parsing
+        const dateStr = reportDateMatch[1].replace(/[\/\-]/g, ' ')
+        const parsedDate = new Date(dateStr)
+        if (!isNaN(parsedDate.getTime())) {
+          parsedData.report_date = parsedDate.toISOString().split('T')[0]
+        }
+      } catch (e) {
+        // Ignore and keep default today's date
+      }
+    }
+
+    // Try to extract Lab Name
+    const labMatch = extractedText.match(/(Dr\s*Lal\s*PathLabs|Apollo\s*Diagnostics|Thyrocare|SRL\s*Diagnostics|Metropolis|Redcliffe|Max\s*Healthcare|Suburban\s*Diagnostics|Tata\s*1mg|Lucid\s*Medical|Vijaya\s*Diagnostic|[A-Za-z0-9\s]{3,25}(?:Diagnostics|Pathology|Labs|Laboratory|Clinic))/i)
+    if (labMatch && labMatch[0]) {
+      parsedData.lab_name = labMatch[0].trim().substring(0, 40)
+    }
+
     // Variables for UserHealthRecord legacy table
     let hr_hemoglobin: number | null = null;
     let hr_fasting_blood_sugar: number | null = null;
