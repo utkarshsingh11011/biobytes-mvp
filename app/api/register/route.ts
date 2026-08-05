@@ -23,8 +23,9 @@ export async function POST(req: Request) {
     }
 
     // Check if user already exists
+    const normalizedEmail = email.toLowerCase()
     const existingUser = await prisma.user.findUnique({
-      where: { email },
+      where: { email: normalizedEmail },
     })
 
     if (existingUser) {
@@ -38,7 +39,7 @@ export async function POST(req: Request) {
     const user = await prisma.user.create({
       data: {
         name,
-        email,
+        email: normalizedEmail,
         passwordHash: hashedPassword,
         role: role || "PATIENT",
       },
