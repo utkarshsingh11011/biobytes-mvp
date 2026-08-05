@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth"
-import { GoogleGenAI } from "@google/genai"
 
 export async function POST(req: Request) {
   try {
@@ -16,33 +15,35 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No metrics provided" }, { status: 400 })
     }
 
-    // Initialize the new Google Gen AI SDK
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY as string })
-
-    // Build a prompt summarizing the user's metrics
-    const prompt = `You are a medical professional providing an AI-generated health trend summary for a patient.
-The patient has provided the following historical biomarker data from their lab reports:
-
-${JSON.stringify(metrics, null, 2)}
-
-Please write a highly professional, easy-to-understand medical summary of these trends. 
-Compare their latest values against their previous values. Are they improving? Worsening?
-Provide general lifestyle or next-step advice based STRICTLY on these metrics.
-
-Keep the response plain text (no markdown, no asterisks, no hashtags) so it can be rendered cleanly in a PDF. 
-Keep it concise (around 150-200 words).
-Do NOT include disclaimers about AI making mistakes; those will be added automatically to the footer.`
-
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt,
+    // Deterministic Rule-Based Summary (Gemini API disabled by request)
+    let summary = "Based on your recent lab reports, here is an automated clinical summary of your health trends:\n\n"
+    
+    let normalCount = 0;
+    let abnormalCount = 0;
+    
+    metrics.forEach((m: any) => {
+       if (m.data && m.data.length > 0) {
+         const latest = m.data[m.data.length - 1]
+         if (latest.isAbnormal || (m.refMin !== null && latest.value < m.refMin) || (m.refMax !== null && latest.value > m.refMax)) {
+            abnormalCount++;
+            summary += `- Your ${m.name} is currently out of range (${latest.value} ${m.unit}).\n`
+         } else {
+            normalCount++;
+         }
+       }
     })
+    
+    if (abnormalCount === 0 && normalCount > 0) {
+      summary += "Great news! All your tracked biomarkers are currently within standard reference ranges.\n"
+    } else if (abnormalCount > 0) {
+      summary += `\nWe detected ${abnormalCount} biomarker(s) outside of standard ranges. Please consult with your primary care physician to discuss these results.`
+    } else {
+      summary += "Not enough data to determine trends."
+    }
 
-    const text = response.text || "Unable to generate summary."
-
-    return NextResponse.json({ summary: text })
+    return NextResponse.json({ summary })
   } catch (error: any) {
-    console.error("AI Summary Error:", error)
-    return NextResponse.json({ error: "Failed to generate AI summary" }, { status: 500 })
+    console.error("Summary Error:", error)
+    return NextResponse.json({ error: "Failed to generate summary" }, { status: 500 })
   }
 }
