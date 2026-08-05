@@ -111,37 +111,37 @@ export async function POST(req: Request) {
 
     // HEMOGLOBIN
     hr_hemoglobin = extractBiomarker([
-      /(?:hemoglobin|hb|haemoglobin)[^\d\n]*([\d\.]+)/i,
+      /(?:hemoglobin|hb|haemoglobin)[^\d]{0,40}?([\d\.]+)/i,
     ], "Hemoglobin", "g/dL")
 
     // FASTING SUGAR
     hr_fasting_blood_sugar = extractBiomarker([
-      /(?:fasting blood sugar|fbs|fasting plasma glucose|fpg)[^\d\n]*([\d\.]+)/i,
+      /(?:fasting blood sugar|fbs|fasting plasma glucose|fpg)[^\d]{0,40}?([\d\.]+)/i,
     ], "Fasting Blood Sugar", "mg/dL")
 
     // CHOLESTEROL
     hr_total_cholesterol = extractBiomarker([
-      /(?:total cholesterol|cholesterol total|cholesterol)[^\d\n]*([\d\.]+)/i,
+      /(?:total cholesterol|cholesterol total|cholesterol)[^\d]{0,40}?([\d\.]+)/i,
     ], "Total Cholesterol", "mg/dL")
 
     // TSH
     hr_thyroid_tsh = extractBiomarker([
-      /(?:tsh|thyroid stimulating hormone)[^\d\n]*([\d\.]+)/i,
+      /(?:tsh|thyroid stimulating hormone)[^\d]{0,40}?([\d\.]+)/i,
     ], "Thyroid TSH", "uIU/mL")
 
     // VITAMIN D
     hr_vitamin_d = extractBiomarker([
-      /(?:vitamin d|vit d|25-oh vitamin d)[^\d\n]*([\d\.]+)/i,
+      /(?:vitamin d|vit d|25-oh vitamin d)[^\d]{0,40}?([\d\.]+)/i,
     ], "Vitamin D", "ng/mL")
 
     // VITAMIN B12
     hr_vitamin_b12 = extractBiomarker([
-      /(?:vitamin b12|vit b12)[^\d\n]*([\d\.]+)/i,
+      /(?:vitamin b12|vit b12)[^\d]{0,40}?([\d\.]+)/i,
     ], "Vitamin B12", "pg/mL")
 
     // CALCIUM
     hr_calcium = extractBiomarker([
-      /(?:calcium|total calcium)[^\d\n]*([\d\.]+)/i,
+      /(?:calcium|total calcium)[^\d]{0,40}?([\d\.]+)/i,
     ], "Calcium", "mg/dL")
 
     // Ensure we generate some AI Summary text so it's not empty on the dashboard
