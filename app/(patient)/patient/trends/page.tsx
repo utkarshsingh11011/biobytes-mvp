@@ -172,8 +172,11 @@ export default function TrendsPage() {
                     >
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
                       <XAxis 
-                        dataKey="date" 
-                        tickFormatter={formatDate}
+                        dataKey="id" 
+                        tickFormatter={(id) => {
+                          const point = trend.data.find((d: any) => d.id === id)
+                          return point ? formatDate(point.date) : ''
+                        }}
                         tick={{ fontSize: 12, fill: '#6b7280' }}
                         axisLine={false}
                         tickLine={false}
@@ -185,10 +188,10 @@ export default function TrendsPage() {
                         tickLine={false}
                       />
                       <Tooltip 
-                        content={({ active, payload, label }) => {
+                        content={({ active, payload }) => {
                           if (active && payload && payload.length) {
                             const data = payload[0].payload
-                            const exactDate = new Date(label as string || "").toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
+                            const exactDate = new Date(data.date).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
                             return (
                               <div className="bg-white p-3 border rounded shadow-md text-sm">
                                 <p className="font-bold text-gray-800">{exactDate}</p>
