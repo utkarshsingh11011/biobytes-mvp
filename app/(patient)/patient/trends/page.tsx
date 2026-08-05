@@ -185,8 +185,20 @@ export default function TrendsPage() {
                         tickLine={false}
                       />
                       <Tooltip 
-                        labelFormatter={(label: any) => formatDate(label as string)}
-                        formatter={(value: any) => [`${value} ${trend.unit}`, trend.name]}
+                        content={({ active, payload, label }) => {
+                          if (active && payload && payload.length) {
+                            const data = payload[0].payload
+                            const exactDate = new Date(label as string || "").toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
+                            return (
+                              <div className="bg-white p-3 border rounded shadow-md text-sm">
+                                <p className="font-bold text-gray-800">{exactDate}</p>
+                                <p className="text-gray-500 text-xs mb-1">{data.labName || "Lab Report"}</p>
+                                <p className="text-teal-600 font-semibold">{`${data.value} ${trend.unit}`}</p>
+                              </div>
+                            )
+                          }
+                          return null
+                        }}
                       />
                       {trend.refMin !== null && trend.refMax !== null && (
                         <ReferenceArea 
