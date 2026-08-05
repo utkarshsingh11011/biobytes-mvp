@@ -28,7 +28,7 @@ export default function TrendsPage() {
   }, [months])
 
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })
+    return new Date(dateStr).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
   }
 
   const generatePDF = async () => {

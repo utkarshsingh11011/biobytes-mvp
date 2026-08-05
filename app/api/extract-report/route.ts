@@ -82,10 +82,10 @@ export async function POST(req: Request) {
     }
 
     // Try to extract Report Date
-    let reportDateMatch = extractedText.match(/(?:date|registered on|collected on|collection date|reported on)[\s\:\-]*(\d{1,2}[\/\-][a-zA-Z]{3}[\/\-]\d{2,4}|\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{1,2}\s+[a-zA-Z]{3}\s+\d{2,4})/i)
+    let reportDateMatch = extractedText.match(/(?:date|registered on|collected on|collection date|reported on)[\s\:\-]*(\d{1,2}[\/\-][a-zA-Z]{3,4}[\/\-]\d{2,4}|\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{1,2}\s+[a-zA-Z]{3,10}\s+\d{2,4}|[a-zA-Z]{3,10}\s+\d{1,2},?\s+\d{2,4}|\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2})/i)
     if (!reportDateMatch) {
       // Fallback: just find the first date looking string in the document
-      reportDateMatch = extractedText.match(/\b(\d{1,2}[\/\-][a-zA-Z]{3}[\/\-]\d{2,4}|\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{1,2}\s+[a-zA-Z]{3}\s+\d{2,4})\b/i)
+      reportDateMatch = extractedText.match(/\b(\d{1,2}[\/\-][a-zA-Z]{3,4}[\/\-]\d{2,4}|\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{1,2}\s+[a-zA-Z]{3,10}\s+\d{2,4}|[a-zA-Z]{3,10}\s+\d{1,2},?\s+\d{2,4}|\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2})\b/i)
     }
     
     if (reportDateMatch && reportDateMatch[1]) {
