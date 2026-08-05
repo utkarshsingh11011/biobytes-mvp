@@ -79,7 +79,7 @@ export default function RegisterPage() {
         <div className="flex justify-center mb-8">
           <Link href="/" className="flex items-center space-x-2">
             <Activity className="h-8 w-8 text-primary" />
-            <span className="font-bold text-2xl tracking-tight">E-Health Tracker</span>
+            <span className="font-bold text-2xl tracking-tight">BioBytes e-health tracker</span>
           </Link>
         </div>
         

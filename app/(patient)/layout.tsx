@@ -17,7 +17,7 @@ export default async function PatientLayout({ children }: { children: React.Reac
       <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6">
         <Link href="/" className="flex items-center space-x-2">
           <Activity className="h-6 w-6 text-primary" />
-          <span className="font-bold text-xl tracking-tight hidden md:inline-block">E-Health Tracker</span>
+          <span className="font-bold text-xl tracking-tight hidden md:inline-block">BioBytes e-health tracker</span>
         </Link>
         <nav className="flex-1 flex items-center space-x-4 md:space-x-6 ml-6 overflow-x-auto">
           <Link href="/patient/dashboard" className="text-sm font-medium transition-colors hover:text-primary flex items-center whitespace-nowrap">

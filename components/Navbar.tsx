@@ -8,7 +8,7 @@ export function Navbar() {
       <div className="container flex h-16 max-w-7xl mx-auto items-center justify-between px-4">
         <Link href="/" className="flex items-center space-x-2">
           <Activity className="h-6 w-6 text-primary" />
-          <span className="font-bold text-xl tracking-tight">E-Health Tracker</span>
+          <span className="font-bold text-xl tracking-tight">BioBytes e-health tracker</span>
         </Link>
         <nav className="hidden md:flex items-center space-x-6 text-sm font-medium">
           <Link href="/patients" className="transition-colors hover:text-primary">Patients</Link>

@@ -5,7 +5,7 @@ import "./globals.css"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "E-Health Tracker and Doctor Appointments",
+  title: "BioBytes e-health tracker",
   description: "Digitize your lab reports, visualize health trends, and share securely with your doctor.",
 }
 
