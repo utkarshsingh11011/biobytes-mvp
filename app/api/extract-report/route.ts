@@ -4,11 +4,11 @@ import { authOptions } from "@/lib/auth"
 import { PrismaClient } from "@prisma/client"
 import Tesseract from "tesseract.js"
 import { extractText } from "unpdf"
-import { GoogleGenAI } from "@google/genai"
+import { GoogleGenerativeAI } from "@google/generative-ai"
 
 const prisma = new PrismaClient()
 const apiKey = process.env.GEMINI_API_KEY
-const ai = apiKey ? new GoogleGenAI({ apiKey }) : null
+const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null
 
 export const maxDuration = 60 
 
@@ -118,23 +118,17 @@ export async function POST(req: Request) {
     const microPromptText = cleanedLines.join(' | ')
 
     // Call Gemini with the strict prompt
-    if (!ai) {
+    if (!genAI) {
       throw new Error("Missing GEMINI_API_KEY environment variable. Please add your Gemini API key in your Vercel settings.")
     }
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-1.5-flash-latest',
-      contents: [
-        { role: 'user', parts: [{ text: `OCR TEXT TO PROCESS:\n\n${microPromptText}` }] }
-      ],
-      config: {
-        systemInstruction: SYSTEM_PROMPT,
-        temperature: 0.1,
-        responseMimeType: "application/json"
-      }
+    const model = genAI.getGenerativeModel({ 
+      model: "gemini-1.5-flash",
+      systemInstruction: SYSTEM_PROMPT
     })
-
-    const responseText = response.text
+    
+    const result = await model.generateContent(microPromptText)
+    const responseText = result.response.text()
     if (!responseText) {
       throw new Error("AI returned empty response")
     }
