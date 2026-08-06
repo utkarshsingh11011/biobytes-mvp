@@ -130,6 +130,7 @@ export async function POST(req: Request) {
     let hr_hemoglobin: number | null = null;
     let hr_fasting_blood_sugar: number | null = null;
     let hr_total_cholesterol: number | null = null;
+    let hr_ldl_cholesterol: number | null = null;
     let hr_thyroid_tsh: number | null = null;
     let hr_vitamin_d: number | null = null;
     let hr_vitamin_b12: number | null = null;
@@ -164,10 +165,16 @@ export async function POST(req: Request) {
       /(?:fasting blood sugar|fbs|fasting plasma glucose|fpg)[^\d]{0,40}?([\d\.]+)/i,
     ], "Fasting Blood Sugar", "mg/dL")
 
-    // CHOLESTEROL
+    // STRICT TOTAL CHOLESTEROL
     hr_total_cholesterol = extractBiomarker([
-      /(?:total cholesterol|cholesterol total|cholesterol)[^\d]{0,40}?([\d\.]+)/i,
+      /Total\s+Cholesterol[^\d]{0,40}?([\d\.]+)/i,
+      /Cholesterol\s+Total[^\d]{0,40}?([\d\.]+)/i,
     ], "Total Cholesterol", "mg/dL")
+
+    // STRICT LDL CHOLESTEROL
+    hr_ldl_cholesterol = extractBiomarker([
+      /LDL[^\d]{0,40}?([\d\.]+)/i,
+    ], "LDL Cholesterol", "mg/dL")
 
     // TSH
     hr_thyroid_tsh = extractBiomarker([
@@ -236,6 +243,7 @@ export async function POST(req: Request) {
           "hemoglobin": { code: "HEMOGLOBIN", displayName: "Hemoglobin" },
           "fasting blood sugar": { code: "FASTING_SUGAR", displayName: "Fasting Blood Sugar" },
           "total cholesterol": { code: "CHOLESTEROL", displayName: "Total Cholesterol" },
+          "ldl cholesterol": { code: "LDL", displayName: "LDL Cholesterol" },
           "thyroid tsh": { code: "TSH", displayName: "Thyroid TSH" },
           "calcium": { code: "CALCIUM", displayName: "Calcium" },
           "vitamin d": { code: "VITAMIN_D", displayName: "Vitamin D" },
@@ -291,7 +299,7 @@ export async function POST(req: Request) {
         hemoglobin: hr_hemoglobin,
         fasting_blood_sugar: hr_fasting_blood_sugar,
         thyroid_tsh: hr_thyroid_tsh,
-        ldl_cholesterol: hr_total_cholesterol, // Legacy mapping
+        ldl_cholesterol: hr_ldl_cholesterol, // Fixed mapping
         vitamin_d: hr_vitamin_d,
         vitamin_b12: hr_vitamin_b12
       },

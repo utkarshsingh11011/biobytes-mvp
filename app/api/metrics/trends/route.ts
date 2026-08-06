@@ -15,7 +15,9 @@ export async function GET(req: Request) {
   const months = parseInt(searchParams.get("months") || "6")
 
   const dateLimit = new Date()
-  dateLimit.setMonth(dateLimit.getMonth() - months)
+  if (months === 3) dateLimit.setDate(dateLimit.getDate() - 90)
+  else if (months === 6) dateLimit.setDate(dateLimit.getDate() - 180)
+  else dateLimit.setDate(dateLimit.getDate() - 365)
 
   const whereClause: any = {
     report: {
@@ -64,7 +66,10 @@ export async function GET(req: Request) {
 
   // Append new AI Extracted data from UserHealthRecord
   const healthRecords = await prisma.userHealthRecord.findMany({
-    where: { patientId: session.user.id, createdAt: { gte: dateLimit } },
+    where: { 
+      patientId: session.user.id, 
+      report: { reportDate: { gte: dateLimit } }
+    },
     include: { report: { select: { reportDate: true, labName: true } } },
     orderBy: { report: { reportDate: 'asc' } }
   })
