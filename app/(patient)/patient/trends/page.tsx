@@ -221,7 +221,7 @@ export default function TrendsPage() {
               
               <CardContent className="p-0">
                 {trend.history.length > 0 ? (
-                  <div className="h-[280px] w-full p-4">
+                  <div className="h-[280px] w-full p-4 relative">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart
                         data={trend.history}
@@ -281,20 +281,35 @@ export default function TrendsPage() {
                     </ResponsiveContainer>
                   </div>
                 ) : (
-                  // BEAUTIFUL EMPTY STATE FOR TESTS WITH NO DATA
-                  <div className="empty-state-chart h-[280px] w-full flex flex-col items-center justify-center p-6 text-center bg-gradient-to-b from-transparent to-muted/20">
-                    <div className="h-16 w-16 rounded-full bg-muted/50 flex items-center justify-center mb-4 shadow-inner">
-                      <FileX className="h-8 w-8 text-muted-foreground/50" />
+                  // BEAUTIFUL EMPTY STATE WITH FADED CHART GRID
+                  <div className="empty-state-chart h-[280px] w-full p-4 relative flex items-center justify-center">
+                    {/* Faded Background Chart */}
+                    <div className="absolute inset-0 p-4 opacity-20 pointer-events-none grayscale">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={[{ id: 1, value: trend.refMax || 100 }, { id: 2, value: trend.refMin || 0 }]} margin={{ top: 20, right: 30, left: 10, bottom: 5 }}>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
+                          <XAxis dataKey="id" tick={false} axisLine={false} tickLine={false} />
+                          <YAxis domain={['auto', 'auto']} tick={{ fontSize: 12, fill: '#6b7280' }} axisLine={false} tickLine={false} width={40} />
+                          <Line type="monotone" dataKey="value" stroke="#9ca3af" strokeWidth={2} strokeDasharray="5 5" dot={false} />
+                        </LineChart>
+                      </ResponsiveContainer>
                     </div>
-                    <h3 className="font-semibold text-foreground/80 mb-2">No historical data</h3>
-                    <p className="text-sm text-muted-foreground max-w-[250px] mb-6">
-                      No data available yet. Upload your next report to start tracking {trend.name}.
-                    </p>
-                    <Link href="/patient/upload">
-                      <Button variant="outline" size="sm" className="rounded-full shadow-sm hover:shadow-md transition-all">
-                        Upload Report
-                      </Button>
-                    </Link>
+                    
+                    {/* Glassmorphism Overlay */}
+                    <div className="z-10 flex flex-col items-center justify-center p-6 text-center bg-background/60 backdrop-blur-sm rounded-xl border border-white/20 shadow-sm max-w-[80%]">
+                      <div className="h-12 w-12 rounded-full bg-muted/80 flex items-center justify-center mb-3 shadow-inner">
+                        <FileX className="h-6 w-6 text-muted-foreground/70" />
+                      </div>
+                      <h3 className="font-semibold text-foreground/90 mb-1 text-sm">No historical data</h3>
+                      <p className="text-xs text-muted-foreground max-w-[200px] mb-4">
+                        Upload your next report to track {trend.name}.
+                      </p>
+                      <Link href="/patient/upload">
+                        <Button variant="outline" size="sm" className="h-8 text-xs rounded-full shadow-sm hover:shadow-md transition-all bg-background/50">
+                          Upload Report
+                        </Button>
+                      </Link>
+                    </div>
                   </div>
                 )}
               </CardContent>
