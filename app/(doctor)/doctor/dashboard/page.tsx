@@ -43,12 +43,8 @@ export default function DoctorDashboardPage() {
     }
   }
 
-  // Use Vercel's production URL if available to bypass Preview deployment protection for patients
-  const appUrl = process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL 
-    ? `https://${process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL}` 
-    : process.env.NEXT_PUBLIC_APP_URL 
-      ? process.env.NEXT_PUBLIC_APP_URL 
-      : (typeof window !== 'undefined' ? window.location.origin : "");
+  // Prioritize custom domain 'qurix.in' or explicit env var to bypass Vercel preview protection
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://qurix.in";
 
   const bookingUrl = appUrl && session?.user?.id 
     ? `${appUrl}/patient/book/${session.user.id}` 
