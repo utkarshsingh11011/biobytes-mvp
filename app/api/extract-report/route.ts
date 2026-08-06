@@ -123,11 +123,11 @@ export async function POST(req: Request) {
     }
 
     const model = genAI.getGenerativeModel({ 
-      model: "gemini-1.5-flash",
-      systemInstruction: SYSTEM_PROMPT
+      model: "gemini-pro"
     })
     
-    const result = await model.generateContent(microPromptText)
+    const fullPrompt = `${SYSTEM_PROMPT}\n\nOCR TEXT TO PROCESS:\n\n${microPromptText}`
+    const result = await model.generateContent(fullPrompt)
     const responseText = result.response.text()
     if (!responseText) {
       throw new Error("AI returned empty response")
