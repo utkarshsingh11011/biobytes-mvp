@@ -5,7 +5,7 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, context: any) {
   try {
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== "ADMIN") {
@@ -14,7 +14,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 
     const body = await req.json();
     const { action } = body;
-    const { id } = params;
+    const { id } = await context.params;
 
     if (!["SUSPEND", "ACTIVATE", "RESET_PASSWORD"].includes(action)) {
       return NextResponse.json({ error: "Invalid action" }, { status: 400 });
