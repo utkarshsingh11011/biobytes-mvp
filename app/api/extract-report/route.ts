@@ -103,11 +103,24 @@ export async function POST(req: Request) {
       throw new Error("Could not extract any text from the document.")
     }
 
+    // HYBRID PRE-FILTER: Token Optimization
+    const rawLines = extractedText.split('\n')
+    const cleanedLines = rawLines.map(line => line.trim()).filter(line => {
+      if (!line) return false
+      if (!/\d/.test(line)) return false // Must contain a number
+      const l = line.toLowerCase()
+      if (l.includes("address") || l.includes("ph:") || l.includes("phone") || l.includes("email") || l.includes("www.") || l.includes("signature") || l.includes("not for medico") || l.includes("end of report") || l.includes("page ")) {
+        return false
+      }
+      return true
+    })
+    const microPromptText = cleanedLines.join(' | ')
+
     // Call Gemini with the strict prompt
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: [
-        { role: 'user', parts: [{ text: `OCR TEXT TO PROCESS:\n\n${extractedText}` }] }
+        { role: 'user', parts: [{ text: `OCR TEXT TO PROCESS:\n\n${microPromptText}` }] }
       ],
       config: {
         systemInstruction: SYSTEM_PROMPT,
