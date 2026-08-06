@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { signIn } from "next-auth/react"
+import { signIn, getSession } from "next-auth/react"
 import { BackButton } from "@/components/BackButton"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
@@ -32,9 +32,8 @@ export default function LoginPage() {
       setError("Invalid email or password")
       setLoading(false)
     } else {
-      // Fetch session to determine role
-      const sessionRes = await fetch("/api/auth/session")
-      const session = await sessionRes.json()
+      // Fetch session directly via next-auth to bypass fetch caching
+      const session = await getSession()
       
       if (session?.user?.role === "ADMIN") {
         router.push("/admin")
