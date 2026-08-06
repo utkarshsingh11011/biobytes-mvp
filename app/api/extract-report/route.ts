@@ -4,6 +4,9 @@ import { authOptions } from "@/lib/auth"
 import { PrismaClient } from "@prisma/client"
 import Tesseract from "tesseract.js"
 import { extractText, getDocumentProxy } from "unpdf"
+import { GoogleGenAI } from "@google/genai"
+
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
 
 const prisma = new PrismaClient()
 
@@ -64,138 +67,62 @@ export async function POST(req: Request) {
       throw new Error("Could not extract any text from the document.")
     }
 
-    // REGEX PARSING LOGIC
-    const parsedData: any = {
-      patient_name: null,
-      lab_name: "BioBytes Automated Lab",
-      report_date: new Date().toISOString().split('T')[0],
-      overall_summary: "Automated extraction using Tesseract.js and PDF-Parse.",
-      biomarkers: []
-    }
-
-    // Try to extract patient name
-    const nameMatch = extractedText.match(/(?:name|patient name|patient)\s*[:\-]?\s*([A-Za-z\s\.]+)/i)
-    if (nameMatch && nameMatch[1]) {
-      let rawName = nameMatch[1].trim().substring(0, 50)
-      rawName = rawName.replace(/^(mr\.|mrs\.|ms\.|dr\.|mr|mrs|ms|dr)\s+/i, '').trim()
-      parsedData.patient_name = rawName
-    }
-
-    // Try to extract Report Date
-    let reportDateMatch = extractedText.match(/(?:date|registered on|collected on|collection date|reported on)[\s\:\-]*(\d{1,2}[\/\-][a-zA-Z]{3,4}[\/\-]\d{2,4}|\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{1,2}\s+[a-zA-Z]{3,10}\s+\d{2,4}|[a-zA-Z]{3,10}\s+\d{1,2},?\s+\d{2,4}|\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2})/i)
-    if (!reportDateMatch) {
-      // Fallback: just find the first date looking string in the document
-      reportDateMatch = extractedText.match(/\b(\d{1,2}[\/\-][a-zA-Z]{3,4}[\/\-]\d{2,4}|\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{1,2}\s+[a-zA-Z]{3,10}\s+\d{2,4}|[a-zA-Z]{3,10}\s+\d{1,2},?\s+\d{2,4}|\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2})\b/i)
-    }
+    const today = new Date().toISOString().split('T')[0];
     
-    if (reportDateMatch && reportDateMatch[1]) {
-      try {
-        let dateStr = reportDateMatch[1].replace(/[\/\-]/g, ' ').replace(/,/g, '').trim()
-        let parsedDate: Date
-        
-        const parts = dateStr.split(/\s+/)
-        if (parts.length === 3 && !isNaN(Number(parts[0])) && !isNaN(Number(parts[1])) && !isNaN(Number(parts[2]))) {
-           let p1 = parts[0]
-           let p2 = parts[1]
-           let p3 = parts[2]
-           
-           if (p1.length === 4) {
-             // YYYY MM DD
-             parsedDate = new Date(`${p1}-${p2.padStart(2, '0')}-${p3.padStart(2, '0')}T00:00:00Z`)
-           } else {
-             // DD MM YYYY
-             let year = p3
-             if (year.length === 2) year = "20" + year
-             parsedDate = new Date(`${year}-${p2.padStart(2, '0')}-${p1.padStart(2, '0')}T00:00:00Z`)
-           }
-        } else {
-           parsedDate = new Date(dateStr)
-        }
+    const prompt = `You are a strict, highly accurate medical data extraction API and data filter. Your job is to extract explicit values from the provided medical report and return them in structured JSON, strictly adhering to time-frame queries.
 
-        if (!isNaN(parsedDate.getTime())) {
-          parsedData.report_date = parsedDate.toISOString().split('T')[0]
-        }
-      } catch (e) {
-        // Ignore and keep default today's date
+System Context:
+CURRENT DATE: ${today}
+
+Core Directives (CRITICAL):
+NO HALLUCINATION: Extract test names exactly as they appear on the report. If the report says "Total Cholesterol", output "Total Cholesterol". Do NOT output "LDL", "HDL", or any other variation unless explicitly written on the page with its own value.
+NO INFERENCE: If a test is missing, do not include it. Never guess or calculate a missing value.
+STRICT DATE MATH: If the user requests data for the "last 3 months", you must calculate this window backward strictly from the CURRENT DATE provided above.
+Example Logic: If the Current Date is August 6, the "last 3 months" window is exactly May 6 to August 6.
+Action: Ignore and exclude any lab reports or test data that have a date older than this exact computed window.
+
+Task: Read the provided medical report text, check if the report date falls within the "last 3 months" timeframe, and extract the exact tests conducted.
+
+Required JSON Output Schema:
+{
+"patient_name": "String (Exact match only)",
+"report_date": "YYYY-MM-DD",
+"is_within_timeframe": "Boolean",
+"extracted_tests": [
+{
+"test_name": "String (e.g., Hemoglobin, Total Cholesterol)",
+"value": "Number/String",
+"unit": "String (e.g., g/dL, mg/dL)"
+}
+]
+}
+
+Report Text:
+${extractedText}`;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json"
       }
+    });
+
+    const parsedData = JSON.parse(response.text || "{}");
+
+    if (parsedData.is_within_timeframe === false) {
+      return NextResponse.json({ error: "The uploaded report is older than 3 months and falls outside the allowed timeframe." }, { status: 400 });
     }
 
-    // Try to extract Lab Name
-    const labMatch = extractedText.match(/(Dr\s*Lal\s*PathLabs|Apollo\s*Diagnostics|Thyrocare|SRL\s*Diagnostics|Metropolis|Redcliffe|Max\s*Healthcare|Suburban\s*Diagnostics|Tata\s*1mg|Lucid\s*Medical|Vijaya\s*Diagnostic|[A-Za-z0-9\s]{3,25}(?:Diagnostics|Pathology|Labs|Laboratory|Clinic))/i)
-    if (labMatch && labMatch[0]) {
-      parsedData.lab_name = labMatch[0].trim().substring(0, 40)
-    }
-
-    // Variables for UserHealthRecord legacy table
-    let hr_hemoglobin: number | null = null;
-    let hr_fasting_blood_sugar: number | null = null;
-    let hr_total_cholesterol: number | null = null;
-    let hr_thyroid_tsh: number | null = null;
-    let hr_vitamin_d: number | null = null;
-    let hr_vitamin_b12: number | null = null;
-    let hr_calcium: number | null = null;
-
-    const extractBiomarker = (regexes: RegExp[], name: string, unit: string) => {
-      for (const regex of regexes) {
-        const match = extractedText.match(regex)
-        if (match && match[1]) {
-          const value = parseFloat(match[1])
-          if (!isNaN(value)) {
-            parsedData.biomarkers.push({
-              name,
-              value,
-              unit,
-              isAbnormal: false
-            })
-            return value;
-          }
-        }
-      }
-      return null;
-    }
-
-    // HEMOGLOBIN
-    hr_hemoglobin = extractBiomarker([
-      /(?:hemoglobin|hb|haemoglobin)[^\d]{0,40}?([\d\.]+)/i,
-    ], "Hemoglobin", "g/dL")
-
-    // FASTING SUGAR
-    hr_fasting_blood_sugar = extractBiomarker([
-      /(?:fasting blood sugar|fbs|fasting plasma glucose|fpg)[^\d]{0,40}?([\d\.]+)/i,
-    ], "Fasting Blood Sugar", "mg/dL")
-
-    // CHOLESTEROL
-    hr_total_cholesterol = extractBiomarker([
-      /(?:total cholesterol|cholesterol total|cholesterol)[^\d]{0,40}?([\d\.]+)/i,
-    ], "Total Cholesterol", "mg/dL")
-
-    // TSH
-    hr_thyroid_tsh = extractBiomarker([
-      /(?:tsh|thyroid stimulating hormone)[^\d]{0,40}?([\d\.]+)/i,
-    ], "Thyroid TSH", "uIU/mL")
-
-    // VITAMIN D
-    hr_vitamin_d = extractBiomarker([
-      /(?:vitamin d|vit d|25-oh vitamin d)[^\d]{0,40}?([\d\.]+)/i,
-    ], "Vitamin D", "ng/mL")
-
-    // VITAMIN B12
-    hr_vitamin_b12 = extractBiomarker([
-      /(?:vitamin b12|vit b12)[^\d]{0,40}?([\d\.]+)/i,
-    ], "Vitamin B12", "pg/mL")
-
-    // CALCIUM
-    hr_calcium = extractBiomarker([
-      /(?:calcium|total calcium)[^\d]{0,40}?([\d\.]+)/i,
-    ], "Calcium", "mg/dL")
-
-    // Ensure we generate some AI Summary text so it's not empty on the dashboard
-    const abnormalities = parsedData.biomarkers.filter((b: any) => b.isAbnormal)
-    if (parsedData.biomarkers.length > 0) {
-      parsedData.overall_summary = `Successfully extracted ${parsedData.biomarkers.length} health metrics (e.g. ${parsedData.biomarkers.map((b: any) => b.name).join(", ")}). Please consult with your doctor for a detailed clinical assessment.`
-    } else {
-      parsedData.overall_summary = "Could not extract standard biomarkers. Please ensure the PDF is a standard lab report."
-    }
+    // Adapt AI output to existing code structure
+    parsedData.biomarkers = (parsedData.extracted_tests || []).map((t: any) => ({
+      name: t.test_name,
+      value: parseFloat(t.value) || t.value,
+      unit: t.unit,
+      isAbnormal: false // We can compute this later or add it to the prompt
+    }));
+    parsedData.overall_summary = `Successfully extracted ${parsedData.biomarkers.length} health metrics using AI extraction.`;
+    parsedData.lab_name = "BioBytes AI Automated Lab";
 
     // Identity Verification
     let reportPatientName = (parsedData.patient_name || "").toLowerCase()
@@ -284,16 +211,24 @@ export async function POST(req: Request) {
       }
     }
 
+    // Variables for UserHealthRecord legacy table mapping
+    const getVal = (testNames: string[]) => {
+      const match = parsedData.biomarkers.find((b: any) => 
+        testNames.some(name => b.name.toLowerCase().includes(name))
+      );
+      return match && typeof match.value === 'number' ? match.value : null;
+    }
+
     const healthRecord = await prisma.userHealthRecord.create({
       data: {
         reportId: report.id,
         patientId: session.user.id,
-        hemoglobin: hr_hemoglobin,
-        fasting_blood_sugar: hr_fasting_blood_sugar,
-        thyroid_tsh: hr_thyroid_tsh,
-        ldl_cholesterol: hr_total_cholesterol, // Legacy mapping
-        vitamin_d: hr_vitamin_d,
-        vitamin_b12: hr_vitamin_b12
+        hemoglobin: getVal(["hemoglobin", "hb"]),
+        fasting_blood_sugar: getVal(["fasting blood sugar", "fbs"]),
+        thyroid_tsh: getVal(["tsh", "thyroid"]),
+        ldl_cholesterol: getVal(["cholesterol", "ldl"]),
+        vitamin_d: getVal(["vitamin d"]),
+        vitamin_b12: getVal(["vitamin b12"])
       },
     })
 
