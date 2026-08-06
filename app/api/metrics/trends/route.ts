@@ -115,5 +115,18 @@ export async function GET(req: Request) {
     }
   })
 
-  return Response.json(Object.values(trendsByBiomarker))
+  const finalTrends = Object.values(trendsByBiomarker).map((trend: any) => {
+    const uniqueData = new Map()
+    trend.data.forEach((d: any) => {
+      const key = `${d.date}_${d.value}`
+      if (!uniqueData.has(key)) {
+        uniqueData.set(key, d)
+      }
+    })
+    trend.data = Array.from(uniqueData.values())
+    trend.data.sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    return trend
+  })
+
+  return Response.json(finalTrends)
 }
