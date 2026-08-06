@@ -33,14 +33,31 @@ export const authOptions: NextAuthOptions = {
         })
 
         if (!user) {
+          await prisma.activityLog.create({
+            data: { action: "LOGIN_FAILED", details: `Failed login attempt for ${credentials.email}` }
+          })
           return null
+        }
+
+        if (user.accountStatus === "SUSPENDED") {
+          await prisma.activityLog.create({
+            data: { action: "LOGIN_BLOCKED", details: `Suspended user attempted login: ${user.email}`, userId: user.id }
+          })
+          throw new Error("Your account has been suspended.")
         }
 
         const isPasswordValid = await compare(credentials.password, user.passwordHash)
 
         if (!isPasswordValid) {
+          await prisma.activityLog.create({
+            data: { action: "LOGIN_FAILED", details: `Invalid password for ${user.email}`, userId: user.id }
+          })
           return null
         }
+
+        await prisma.activityLog.create({
+          data: { action: "LOGIN_SUCCESS", details: `User logged in: ${user.email}`, userId: user.id }
+        })
 
         return {
           id: user.id,

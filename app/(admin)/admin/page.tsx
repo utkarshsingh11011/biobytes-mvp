@@ -1,117 +1,152 @@
-import { getServerSession } from "next-auth/next"
-import { authOptions } from "@/lib/auth"
-import { redirect } from "next/navigation"
-import { PrismaClient } from "@prisma/client"
+"use client"
+
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Users, FileText, FlaskConical, Link as LinkIcon } from "lucide-react"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
+import { Users, FileText, Database, Activity, Calendar } from "lucide-react"
 
-const prisma = new PrismaClient()
+export default function AdminDashboardPage() {
+  const [stats, setStats] = useState<any>(null)
+  const [activities, setActivities] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
-export default async function AdminDashboard() {
-  const session = await getServerSession(authOptions)
-  
-  if (!session || session.user.role !== "ADMIN") {
-    redirect("/login")
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const [statsRes, actRes] = await Promise.all([
+          fetch("/api/admin/stats"),
+          fetch("/api/admin/activity")
+        ])
+        
+        if (statsRes.ok) setStats(await statsRes.json())
+        if (actRes.ok) setActivities(await actRes.json())
+      } catch (err) {
+        console.error(err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchData()
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    )
   }
 
-  const userCount = await prisma.user.count()
-  const reportCount = await prisma.report.count()
-  const labsCount = await prisma.labPartner.count()
-  const usageCount = await prisma.accessCodeUsage.count()
-
-  const labs = await prisma.labPartner.findMany()
-
   return (
-    <div className="flex min-h-screen flex-col bg-muted/20">
-      <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background px-4 md:px-6">
-        <div className="font-bold text-xl tracking-tight">BioBytes e-health tracker <span className="text-primary">Admin</span></div>
-        <Link href="/api/auth/signout">
-          <Button variant="ghost" size="sm">Sign out</Button>
-        </Link>
-      </header>
-      
-      <main className="flex-1 p-4 md:p-8 max-w-7xl mx-auto w-full space-y-8">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Admin Overview</h1>
-          <p className="text-muted-foreground">Platform statistics and partner management.</p>
-        </div>
+    <div className="space-y-8 animate-in fade-in duration-500">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight text-slate-900">Dashboard Overview</h1>
+        <p className="text-slate-500 mt-1">High-level analytics and real-time system activity.</p>
+      </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{userCount}</div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Reports Processed</CardTitle>
-              <FileText className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{reportCount}</div>
-            </CardContent>
-          </Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card className="bg-white/60 backdrop-blur-xl border-white/40 shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-slate-500">Total Users</CardTitle>
+            <Users className="h-4 w-4 text-indigo-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-slate-900">{stats?.totalUsers || 0}</div>
+            <p className="text-xs text-slate-500 mt-1">
+              {stats?.totalPatients || 0} Patients, {stats?.totalDoctors || 0} Doctors
+            </p>
+          </CardContent>
+        </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Lab Partners</CardTitle>
-              <FlaskConical className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{labsCount}</div>
-            </CardContent>
-          </Card>
+        <Card className="bg-white/60 backdrop-blur-xl border-white/40 shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-slate-500">Total Documents</CardTitle>
+            <FileText className="h-4 w-4 text-emerald-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-slate-900">{stats?.totalDocs || 0}</div>
+            <p className="text-xs text-slate-500 mt-1">
+              Across all users
+            </p>
+          </CardContent>
+        </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Doctor Access Views</CardTitle>
-              <LinkIcon className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{usageCount}</div>
-            </CardContent>
-          </Card>
-        </div>
+        <Card className="bg-white/60 backdrop-blur-xl border-white/40 shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-slate-500">Recent Uploads</CardTitle>
+            <Calendar className="h-4 w-4 text-sky-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-slate-900">{stats?.docsThisWeek || 0}</div>
+            <p className="text-xs text-slate-500 mt-1">
+              {stats?.docsToday || 0} today
+            </p>
+          </CardContent>
+        </Card>
 
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight mb-4">Lab Partners</h2>
-          <div className="bg-background rounded-md border">
-            <table className="w-full text-sm text-left">
-              <thead className="bg-muted/50 border-b">
-                <tr>
-                  <th className="px-4 py-3 font-medium">Partner Name</th>
-                  <th className="px-4 py-3 font-medium">Commission %</th>
-                  <th className="px-4 py-3 font-medium">Booking URL</th>
-                  <th className="px-4 py-3 font-medium text-right">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {labs.map(lab => (
-                  <tr key={lab.id} className="border-b last:border-0">
-                    <td className="px-4 py-3 font-medium">{lab.name}</td>
-                    <td className="px-4 py-3">{lab.commissionPct}%</td>
-                    <td className="px-4 py-3 text-muted-foreground">{lab.bookingUrl}</td>
-                    <td className="px-4 py-3 text-right">
-                      {lab.isActive ? (
-                        <span className="text-emerald-600 bg-emerald-100 px-2 py-1 rounded text-xs font-semibold">ACTIVE</span>
-                      ) : (
-                        <span className="text-muted-foreground bg-muted px-2 py-1 rounded text-xs font-semibold">INACTIVE</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </main>
+        <Card className="bg-white/60 backdrop-blur-xl border-white/40 shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-slate-500">Storage Used</CardTitle>
+            <Database className="h-4 w-4 text-amber-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-slate-900">{((stats?.totalDocs || 0) * 1.2).toFixed(1)} MB</div>
+            <p className="text-xs text-slate-500 mt-1">
+              Estimated 1.2MB per file
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <Card className="bg-white shadow-sm border-slate-200 col-span-1 lg:col-span-2">
+          <CardHeader className="border-b border-slate-100 pb-4">
+            <div className="flex items-center gap-2">
+              <Activity className="h-5 w-5 text-indigo-600" />
+              <CardTitle className="text-lg">System Activity Log</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            {activities.length === 0 ? (
+              <div className="p-8 text-center text-slate-500">No recent activity.</div>
+            ) : (
+              <div className="max-h-[400px] overflow-y-auto">
+                <table className="w-full text-sm text-left">
+                  <thead className="text-xs text-slate-500 bg-slate-50 sticky top-0">
+                    <tr>
+                      <th className="px-6 py-3 font-medium">Timestamp</th>
+                      <th className="px-6 py-3 font-medium">Action</th>
+                      <th className="px-6 py-3 font-medium">Details</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {activities.map((act) => (
+                      <tr key={act.id} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap text-slate-500">
+                          {new Date(act.createdAt).toLocaleString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+                            act.action.includes('FAILED') || act.action.includes('SUSPEND') 
+                              ? 'bg-red-100 text-red-700' 
+                              : act.action.includes('SUCCESS') 
+                                ? 'bg-emerald-100 text-emerald-700' 
+                                : 'bg-indigo-100 text-indigo-700'
+                          }`}>
+                            {act.action}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-slate-700">
+                          {act.details}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

@@ -13,6 +13,7 @@ model User {
   passwordHash  String
   name          String?
   role          String    @default("PATIENT") // PATIENT, DOCTOR, ADMIN, LAB_PARTNER
+  accountStatus String    @default("ACTIVE") // ACTIVE, SUSPENDED
   createdAt     DateTime  @default(now())
 
   // Relations
@@ -24,6 +25,7 @@ model User {
   patientAppointments Appointment[]  @relation("PatientAppointments")
   doctorAppointments  Appointment[]  @relation("DoctorAppointments")
   healthRecords       UserHealthRecord[]
+  activities          ActivityLog[]
 }
 
 model DoctorProfile {
@@ -163,4 +165,13 @@ model UserHealthRecord {
   vitamin_b12         Float?
   
   createdAt           DateTime @default(now())
+}
+
+model ActivityLog {
+  id        String   @id @default(uuid())
+  action    String
+  details   String?
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
 }
