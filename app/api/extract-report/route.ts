@@ -126,6 +126,9 @@ export async function POST(req: Request) {
       parsedData.lab_name = labMatch[0].trim().substring(0, 40)
     }
 
+    // Import BIOMARKERS_100 at the top of the file ideally, but for now we'll require it here or ensure it's imported.
+    const { BIOMARKERS_100 } = require('@/lib/biomarkers100');
+    
     // Variables for UserHealthRecord legacy table
     let hr_hemoglobin: number | null = null;
     let hr_fasting_blood_sugar: number | null = null;
@@ -136,64 +139,52 @@ export async function POST(req: Request) {
     let hr_vitamin_b12: number | null = null;
     let hr_calcium: number | null = null;
 
-    const extractBiomarker = (regexes: RegExp[], name: string, unit: string) => {
-      for (const regex of regexes) {
-        const match = extractedText.match(regex)
+    // Universal Dynamic Extraction Engine
+    BIOMARKERS_100.forEach((b: any) => {
+      // Create a flexible regex based on the biomarker's name
+      // e.g., for "Total Cholesterol", we look for "Total Cholesterol" followed by any characters, then a number.
+      // We safely escape the biomarker name.
+      const safeName = b.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      
+      // Some special cases for robust matching (e.g., abbreviations)
+      let patterns = [new RegExp(`(?:${safeName})[^\\d]{0,40}?([\\d\\.]+)`, 'i')];
+      
+      if (b.code === 'HEMOGLOBIN') patterns.push(/(?:hb|haemoglobin)[^\d]{0,40}?([\d\.]+)/i);
+      if (b.code === 'GLUCOSE_FASTING') patterns.push(/(?:fbs|fpg)[^\d]{0,40}?([\d\.]+)/i);
+      if (b.code === 'CHOLESTEROL_TOTAL') patterns.push(/(?<!LDL\s*|HDL\s*|VLDL\s*)(?:Total\s*)?Cholesterol(?:\s*\(?Total\)?)?[^\d]{0,40}?([\d\.]+)/i);
+      if (b.code === 'TSH') patterns.push(/(?:thyroid stimulating hormone)[^\d]{0,40}?([\d\.]+)/i);
+      
+      let matchedValue: number | null = null;
+      for (const regex of patterns) {
+        const match = extractedText.match(regex);
         if (match && match[1]) {
-          const value = parseFloat(match[1])
+          const value = parseFloat(match[1]);
           if (!isNaN(value)) {
             parsedData.biomarkers.push({
-              name,
+              name: b.name,
+              code: b.code,
               value,
-              unit,
+              unit: b.unit,
               isAbnormal: false
-            })
-            return value;
+            });
+            matchedValue = value;
+            break;
           }
         }
       }
-      return null;
-    }
 
-    // HEMOGLOBIN
-    hr_hemoglobin = extractBiomarker([
-      /(?:hemoglobin|hb|haemoglobin)[^\d]{0,40}?([\d\.]+)/i,
-    ], "Hemoglobin", "g/dL")
-
-    // FASTING SUGAR
-    hr_fasting_blood_sugar = extractBiomarker([
-      /(?:fasting blood sugar|fbs|fasting plasma glucose|fpg)[^\d]{0,40}?([\d\.]+)/i,
-    ], "Fasting Blood Sugar", "mg/dL")
-
-    // STRICT TOTAL CHOLESTEROL
-    hr_total_cholesterol = extractBiomarker([
-      /(?<!LDL\s*|HDL\s*|VLDL\s*)(?:Total\s*)?Cholesterol(?:\s*\(?Total\)?)?[^\d]{0,40}?([\d\.]+)/i,
-    ], "Total Cholesterol", "mg/dL")
-
-    // STRICT LDL CHOLESTEROL
-    hr_ldl_cholesterol = extractBiomarker([
-      /LDL(?:\s*Cholesterol)?[^\d]{0,40}?([\d\.]+)/i,
-    ], "LDL Cholesterol", "mg/dL")
-
-    // TSH
-    hr_thyroid_tsh = extractBiomarker([
-      /(?:tsh|thyroid stimulating hormone)[^\d]{0,40}?([\d\.]+)/i,
-    ], "Thyroid TSH", "uIU/mL")
-
-    // VITAMIN D
-    hr_vitamin_d = extractBiomarker([
-      /(?:vitamin d|vit d|25-oh vitamin d)[^\d]{0,40}?([\d\.]+)/i,
-    ], "Vitamin D", "ng/mL")
-
-    // VITAMIN B12
-    hr_vitamin_b12 = extractBiomarker([
-      /(?:vitamin b12|vit b12)[^\d]{0,40}?([\d\.]+)/i,
-    ], "Vitamin B12", "pg/mL")
-
-    // CALCIUM
-    hr_calcium = extractBiomarker([
-      /(?:calcium|total calcium)[^\d]{0,40}?([\d\.]+)/i,
-    ], "Calcium", "mg/dL")
+      // Preserve legacy routing for UserHealthRecord
+      if (matchedValue !== null) {
+        if (b.code === 'HEMOGLOBIN') hr_hemoglobin = matchedValue;
+        if (b.code === 'GLUCOSE_FASTING') hr_fasting_blood_sugar = matchedValue;
+        if (b.code === 'CHOLESTEROL_TOTAL') hr_total_cholesterol = matchedValue;
+        if (b.code === 'LDL') hr_ldl_cholesterol = matchedValue;
+        if (b.code === 'TSH') hr_thyroid_tsh = matchedValue;
+        if (b.code === 'VITAMIN_D') hr_vitamin_d = matchedValue;
+        if (b.code === 'VITAMIN_B12') hr_vitamin_b12 = matchedValue;
+        if (b.code === 'CALCIUM') hr_calcium = matchedValue;
+      }
+    });
 
     // Ensure we generate some AI Summary text so it's not empty on the dashboard
     const abnormalities = parsedData.biomarkers.filter((b: any) => b.isAbnormal)
@@ -238,29 +229,9 @@ export async function POST(req: Request) {
       for (const b of parsedData.biomarkers) {
         if (!b.name || b.value === null || b.value === undefined) continue;
 
-        const BIOMARKER_MAP: Record<string, { code: string, displayName: string }> = {
-          "hemoglobin": { code: "HEMOGLOBIN", displayName: "Hemoglobin" },
-          "fasting blood sugar": { code: "FASTING_SUGAR", displayName: "Fasting Blood Sugar" },
-          "total cholesterol": { code: "CHOLESTEROL", displayName: "Total Cholesterol" },
-          "ldl cholesterol": { code: "LDL", displayName: "LDL Cholesterol" },
-          "thyroid tsh": { code: "TSH", displayName: "Thyroid TSH" },
-          "calcium": { code: "CALCIUM", displayName: "Calcium" },
-          "vitamin d": { code: "VITAMIN_D", displayName: "Vitamin D" },
-          "vitamin b12": { code: "VITAMIN_B12", displayName: "Vitamin B12" }
-        };
-
-        const cleanName = b.name.toLowerCase().trim();
-        
-        let code = b.name.toUpperCase().replace(/[^A-Z0-9]/g, '_');
+        // Dynamically injected code from the universal engine
+        let code = b.code || b.name.toUpperCase().replace(/[^A-Z0-9]/g, '_');
         let finalDisplayName = b.name;
-
-        for (const [key, mapping] of Object.entries(BIOMARKER_MAP)) {
-          if (cleanName.includes(key)) {
-            code = mapping.code;
-            finalDisplayName = mapping.displayName;
-            break;
-          }
-        }
 
         let biomarkerDef = await prisma.biomarkerDefinition.findFirst({
           where: { code }
