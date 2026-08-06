@@ -37,8 +37,10 @@ export default function TrendsPage() {
   // Deduplicate categories for the selector
   const categories = ["All", ...Array.from(new Set(trends.map(t => t.category)))]
 
-  // Filter trends based on category and search query
+  // Filter trends based on category, search query, and presence of data
   const filteredTrends = trends.filter(t => {
+    if (t.history.length === 0) return false;
+    
     const matchesCategory = activeCategory === "All" || t.category === activeCategory
     const matchesSearch = t.name.toLowerCase().includes(searchQuery.toLowerCase())
     return matchesCategory && matchesSearch
