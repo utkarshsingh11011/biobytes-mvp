@@ -239,7 +239,16 @@ export default function TrendsPage() {
                           tickLine={false}
                         />
                         <YAxis 
-                          domain={['auto', 'auto']}
+                          domain={[
+                            (dataMin: number) => {
+                              if (trend.refMin !== null) return Math.floor(Math.min(dataMin, trend.refMin * 0.9));
+                              return Math.floor(dataMin * 0.9);
+                            },
+                            (dataMax: number) => {
+                              if (trend.refMax !== null) return Math.ceil(Math.max(dataMax, trend.refMax * 1.1));
+                              return Math.ceil(dataMax * 1.1);
+                            }
+                          ]}
                           tick={{ fontSize: 12, fill: '#6b7280' }}
                           axisLine={false}
                           tickLine={false}
