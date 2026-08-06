@@ -7,7 +7,8 @@ import { extractText } from "unpdf"
 import { GoogleGenAI } from "@google/genai"
 
 const prisma = new PrismaClient()
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
+const apiKey = process.env.GEMINI_API_KEY
+const ai = apiKey ? new GoogleGenAI({ apiKey }) : null
 
 export const maxDuration = 60 
 
@@ -117,6 +118,10 @@ export async function POST(req: Request) {
     const microPromptText = cleanedLines.join(' | ')
 
     // Call Gemini with the strict prompt
+    if (!ai) {
+      throw new Error("Missing GEMINI_API_KEY environment variable. Please add your Gemini API key in your Vercel settings.")
+    }
+
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: [
