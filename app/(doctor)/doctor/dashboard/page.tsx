@@ -43,8 +43,8 @@ export default function DoctorDashboardPage() {
     }
   }
 
-  // Prioritize custom domain 'qurix.in' or explicit env var to bypass Vercel preview protection
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://qurix.in";
+  // Dynamically use the current Vercel URL
+  const appUrl = typeof window !== 'undefined' ? window.location.origin : "";
 
   const bookingUrl = appUrl && session?.user?.id 
     ? `${appUrl}/patient/book/${session.user.id}` 
