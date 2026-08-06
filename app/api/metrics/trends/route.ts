@@ -35,7 +35,7 @@ export async function GET(req: Request) {
     include: {
       biomarker: true,
       report: {
-        select: { reportDate: true }
+        select: { reportDate: true, labName: true }
       }
     },
     orderBy: {
@@ -52,15 +52,17 @@ export async function GET(req: Request) {
         name: m.biomarker.displayName,
         code: m.biomarker.code,
         unit: m.unit,
-        refMin: m.refMin,
-        refMax: m.refMax,
+        refMin: m.refMin !== null ? m.refMin : m.biomarker.refMin,
+        refMax: m.refMax !== null ? m.refMax : m.biomarker.refMax,
         data: []
       }
     }
     trendsByBiomarker[m.biomarker.code].data.push({
+      id: m.id,
       date: m.report.reportDate?.toISOString(),
       value: m.value,
-      isAbnormal: m.isAbnormal
+      isAbnormal: m.isAbnormal,
+      labName: m.report.labName || "Lab Report"
     })
   })
 
