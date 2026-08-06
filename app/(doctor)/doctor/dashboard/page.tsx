@@ -43,8 +43,15 @@ export default function DoctorDashboardPage() {
     }
   }
 
-  const bookingUrl = typeof window !== 'undefined' && session?.user?.id 
-    ? `${window.location.origin}/patient/book/${session.user.id}` 
+  // Use Vercel's production URL if available to bypass Preview deployment protection for patients
+  const appUrl = process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL 
+    ? `https://${process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL}` 
+    : process.env.NEXT_PUBLIC_APP_URL 
+      ? process.env.NEXT_PUBLIC_APP_URL 
+      : (typeof window !== 'undefined' ? window.location.origin : "");
+
+  const bookingUrl = appUrl && session?.user?.id 
+    ? `${appUrl}/patient/book/${session.user.id}` 
     : ""
 
   return (
