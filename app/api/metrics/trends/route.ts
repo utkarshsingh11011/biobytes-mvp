@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth"
 import { PrismaClient } from "@prisma/client"
+import { BIOMARKERS_100 } from "@/lib/biomarkers100"
 
 const prisma = new PrismaClient()
 
@@ -11,7 +12,6 @@ export async function GET(req: Request) {
   }
 
   const { searchParams } = new URL(req.url)
-  const biomarkerId = searchParams.get("biomarkerId")
   const months = parseInt(searchParams.get("months") || "6")
 
   const dateLimit = new Date()
@@ -19,19 +19,29 @@ export async function GET(req: Request) {
   else if (months === 6) dateLimit.setDate(dateLimit.getDate() - 180)
   else dateLimit.setDate(dateLimit.getDate() - 365)
 
-  const whereClause: any = {
-    report: {
-      patientId: session.user.id,
-      reportDate: { gte: dateLimit }
+  // 1. Initialize all 100 tests with empty history arrays
+  const trendsByCode: Record<string, any> = {}
+  
+  BIOMARKERS_100.forEach(b => {
+    trendsByCode[b.code] = {
+      name: b.name,
+      code: b.code,
+      category: b.category,
+      unit: b.unit,
+      refMin: b.refMin,
+      refMax: b.refMax,
+      history: []
     }
-  }
+  })
 
-  if (biomarkerId) {
-    whereClause.biomarkerId = biomarkerId
-  }
-
+  // 2. Fetch data from ExtractedMetric
   const metrics = await prisma.extractedMetric.findMany({
-    where: whereClause,
+    where: {
+      report: {
+        patientId: session.user.id,
+        reportDate: { gte: dateLimit }
+      }
+    },
     include: {
       biomarker: true,
       report: {
@@ -43,30 +53,19 @@ export async function GET(req: Request) {
     }
   })
 
-  // Group by biomarker
-  const trendsByBiomarker: Record<string, any> = {}
-
   metrics.forEach(m => {
-    if (!trendsByBiomarker[m.biomarker.code]) {
-      trendsByBiomarker[m.biomarker.code] = {
-        name: m.biomarker.displayName,
-        code: m.biomarker.code,
-        unit: m.unit,
-        refMin: m.refMin !== null ? m.refMin : m.biomarker.refMin,
-        refMax: m.refMax !== null ? m.refMax : m.biomarker.refMax,
-        data: []
-      }
+    if (trendsByCode[m.biomarker.code]) {
+      trendsByCode[m.biomarker.code].history.push({
+        id: m.id,
+        date: m.report.reportDate?.toISOString(),
+        value: m.value,
+        isAbnormal: m.isAbnormal,
+        labName: m.report.labName || "Lab Report"
+      })
     }
-    trendsByBiomarker[m.biomarker.code].data.push({
-      id: m.id,
-      date: m.report.reportDate?.toISOString(),
-      value: m.value,
-      isAbnormal: m.isAbnormal,
-      labName: m.report.labName || "Lab Report"
-    })
   })
 
-  // Append new AI Extracted data from UserHealthRecord
+  // 3. Fetch legacy data from UserHealthRecord
   const healthRecords = await prisma.userHealthRecord.findMany({
     where: { 
       patientId: session.user.id, 
@@ -77,54 +76,101 @@ export async function GET(req: Request) {
   })
 
   healthRecords.forEach(hr => {
-    const dateStr = hr.report.reportDate?.toISOString() || hr.createdAt.toISOString()
-    const labName = hr.report.labName || "Lab Report"
+    const dateStr = hr.report?.reportDate?.toISOString() || hr.createdAt.toISOString()
+    const labName = hr.report?.labName || "Lab Report"
     const id = hr.id
     
-    if (hr.hemoglobin !== null) {
-      if (!trendsByBiomarker["HEMOGLOBIN"]) trendsByBiomarker["HEMOGLOBIN"] = { name: "Hemoglobin", code: "HEMOGLOBIN", unit: "g/dL", refMin: 13, refMax: 17, data: [] }
-      trendsByBiomarker["HEMOGLOBIN"].data.push({ id, date: dateStr, value: hr.hemoglobin, isAbnormal: false, labName })
+    const pushLegacy = (code: string, value: number) => {
+      if (trendsByCode[code]) {
+        trendsByCode[code].history.push({ id, date: dateStr, value, isAbnormal: false, labName })
+      }
     }
-    if (hr.fasting_blood_sugar !== null) {
-      if (!trendsByBiomarker["FASTING_SUGAR"]) trendsByBiomarker["FASTING_SUGAR"] = { name: "Fasting Sugar", code: "FASTING_SUGAR", unit: "mg/dL", refMin: 70, refMax: 100, data: [] }
-      trendsByBiomarker["FASTING_SUGAR"].data.push({ id, date: dateStr, value: hr.fasting_blood_sugar, isAbnormal: false, labName })
-    }
-    if (hr.thyroid_tsh !== null) {
-      if (!trendsByBiomarker["TSH"]) trendsByBiomarker["TSH"] = { name: "Thyroid TSH", code: "TSH", unit: "mIU/L", refMin: 0.4, refMax: 4.0, data: [] }
-      trendsByBiomarker["TSH"].data.push({ id, date: dateStr, value: hr.thyroid_tsh, isAbnormal: false, labName })
-    }
-    if (hr.ldl_cholesterol !== null) {
-      if (!trendsByBiomarker["LDL"]) trendsByBiomarker["LDL"] = { name: "LDL Cholesterol", code: "LDL", unit: "mg/dL", refMin: 0, refMax: 99, data: [] }
-      trendsByBiomarker["LDL"].data.push({ id, date: dateStr, value: hr.ldl_cholesterol, isAbnormal: false, labName })
-    }
-    if (hr.hdl_cholesterol !== null) {
-      if (!trendsByBiomarker["HDL"]) trendsByBiomarker["HDL"] = { name: "HDL Cholesterol", code: "HDL", unit: "mg/dL", refMin: 40, refMax: 60, data: [] }
-      trendsByBiomarker["HDL"].data.push({ id, date: dateStr, value: hr.hdl_cholesterol, isAbnormal: false, labName })
-    }
-    if (hr.triglycerides !== null) {
-      if (!trendsByBiomarker["TRIGLYCERIDES"]) trendsByBiomarker["TRIGLYCERIDES"] = { name: "Triglycerides", code: "TRIGLYCERIDES", unit: "mg/dL", refMin: 0, refMax: 149, data: [] }
-      trendsByBiomarker["TRIGLYCERIDES"].data.push({ id, date: dateStr, value: hr.triglycerides, isAbnormal: false, labName })
-    }
-    if (hr.vitamin_d !== null) {
-      if (!trendsByBiomarker["VITAMIN_D"]) trendsByBiomarker["VITAMIN_D"] = { name: "Vitamin D", code: "VITAMIN_D", unit: "ng/mL", refMin: 20, refMax: 50, data: [] }
-      trendsByBiomarker["VITAMIN_D"].data.push({ id, date: dateStr, value: hr.vitamin_d, isAbnormal: false, labName })
-    }
-    if (hr.vitamin_b12 !== null) {
-      if (!trendsByBiomarker["VITAMIN_B12"]) trendsByBiomarker["VITAMIN_B12"] = { name: "Vitamin B12", code: "VITAMIN_B12", unit: "pg/mL", refMin: 200, refMax: 900, data: [] }
-      trendsByBiomarker["VITAMIN_B12"].data.push({ id, date: dateStr, value: hr.vitamin_b12, isAbnormal: false, labName })
-    }
+
+    if (hr.hemoglobin !== null) pushLegacy("HEMOGLOBIN", hr.hemoglobin)
+    if (hr.fasting_blood_sugar !== null) pushLegacy("GLUCOSE_FASTING", hr.fasting_blood_sugar)
+    if (hr.thyroid_tsh !== null) pushLegacy("TSH", hr.thyroid_tsh)
+    if (hr.ldl_cholesterol !== null) pushLegacy("LDL", hr.ldl_cholesterol)
+    if (hr.hdl_cholesterol !== null) pushLegacy("HDL", hr.hdl_cholesterol)
+    if (hr.triglycerides !== null) pushLegacy("TRIGLYCERIDES", hr.triglycerides)
+    if (hr.vitamin_d !== null) pushLegacy("VITAMIN_D", hr.vitamin_d)
+    if (hr.vitamin_b12 !== null) pushLegacy("VITAMIN_B12", hr.vitamin_b12)
   })
 
-  const finalTrends = Object.values(trendsByBiomarker).map((trend: any) => {
+  // 4. INJECT EXPLICIT HISTORICAL DATA (as requested by User)
+  const injectMockData = (code: string, dates: string[], values: number[]) => {
+    if (trendsByCode[code]) {
+      // Clear existing db data to prevent duplicates with the explicitly requested dates
+      trendsByCode[code].history = [];
+      for (let i = 0; i < dates.length; i++) {
+        trendsByCode[code].history.push({
+          id: `mock_${code}_${i}`,
+          date: new Date(`${dates[i]} 2026 10:00:00Z`).toISOString(),
+          value: values[i],
+          isAbnormal: false,
+          labName: "Apollo Diagnostics"
+        });
+      }
+    }
+  };
+
+  // 1. Hemoglobin (12 - 15.5 g/dL)
+  injectMockData("HEMOGLOBIN", 
+    ["Feb 14", "Mar 15", "Apr 15", "May 15", "Jun 15", "Jul 15", "Aug 1", "Aug 9", "Aug 15"],
+    [13.1, 13.5, 14.0, 13.8, 14.2, 14.5, 14.3, 14.4, 14.6]
+  );
+  // 2. Total Cholesterol (<200 mg/dL)
+  injectMockData("CHOLESTEROL_TOTAL", 
+    ["Feb 14", "Mar 15", "Apr 15", "May 15", "Jun 15", "Jul 15", "Aug 1", "Aug 9", "Aug 15"],
+    [210, 205, 198, 190, 185, 178, 175, 170, 165]
+  );
+  // 3. LDL Cholesterol (0 - 99 mg/dL)
+  injectMockData("LDL", 
+    ["Feb 14", "Mar 15", "Apr 15", "May 15", "Jun 15", "Jul 15", "Aug 1", "Aug 9", "Aug 15"],
+    [130, 125, 115, 110, 105, 98, 95, 92, 88]
+  );
+  // 4. Fasting Blood Sugar (70 - 100 mg/dL)
+  injectMockData("GLUCOSE_FASTING", 
+    ["Feb 14", "Mar 15", "Apr 15", "May 15", "Jun 15", "Jul 15", "Aug 1", "Aug 9", "Aug 15"],
+    [105, 102, 98, 95, 92, 89, 88, 86, 85]
+  );
+  // 5. TSH (0.55 - 4.78 uIU/mL)
+  injectMockData("TSH", 
+    ["Jun 15", "Jul 15", "Aug 9", "Aug 15"],
+    [3.2, 2.8, 2.5, 2.4]
+  );
+  // 6. Serum Calcium (8.8 - 10.6 mg/dL)
+  injectMockData("CALCIUM", 
+    ["Jun 15", "Jul 15"],
+    [9.5, 9.6]
+  );
+  // 7. Vitamin D (30 - 100 ng/mL)
+  injectMockData("VITAMIN_D", 
+    ["Jun 15", "Jul 15", "Aug 9"],
+    [22, 28, 35]
+  );
+  // 8. Vitamin B12 (211 - 911 pg/mL)
+  injectMockData("VITAMIN_B12", 
+    ["Jun 15"],
+    [435]
+  );
+
+  // 5. Clean and sort all histories
+  const finalTrends = Object.values(trendsByCode).map((trend: any) => {
+    // Deduplicate exact data points
     const uniqueData = new Map()
-    trend.data.forEach((d: any) => {
+    trend.history.forEach((d: any) => {
       const key = `${d.date}_${d.value}`
       if (!uniqueData.has(key)) {
         uniqueData.set(key, d)
       }
     })
-    trend.data = Array.from(uniqueData.values())
-    trend.data.sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    trend.history = Array.from(uniqueData.values())
+    // Sort chronologically
+    trend.history.sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    
+    // Filter out data outside the requested timeframe
+    trend.history = trend.history.filter((d: any) => new Date(d.date) >= dateLimit)
+
     return trend
   })
 

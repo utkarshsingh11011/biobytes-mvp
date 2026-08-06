@@ -3,16 +3,19 @@
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Download } from "lucide-react"
+import { Download, Search, FileX } from "lucide-react"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceArea } from 'recharts'
 import jsPDF from "jspdf"
 import html2canvas from "html2canvas"
+import Link from "next/link"
 
 export default function TrendsPage() {
   const [trends, setTrends] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [months, setMonths] = useState(6)
   const [generatingPdf, setGeneratingPdf] = useState(false)
+  const [activeCategory, setActiveCategory] = useState("All")
+  const [searchQuery, setSearchQuery] = useState("")
 
   useEffect(() => {
     async function fetchTrends() {
@@ -31,36 +34,48 @@ export default function TrendsPage() {
     return new Date(dateStr).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
   }
 
+  // Deduplicate categories for the selector
+  const categories = ["All", ...Array.from(new Set(trends.map(t => t.category)))]
+
+  // Filter trends based on category and search query
+  const filteredTrends = trends.filter(t => {
+    const matchesCategory = activeCategory === "All" || t.category === activeCategory
+    const matchesSearch = t.name.toLowerCase().includes(searchQuery.toLowerCase())
+    return matchesCategory && matchesSearch
+  })
+
   const generatePDF = async () => {
     setGeneratingPdf(true)
     try {
-      // 1. Fetch AI Summary
+      const populatedTrends = trends.filter(t => t.history && t.history.length > 0)
+      
       const res = await fetch('/api/generate-summary', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ metrics: trends })
+        body: JSON.stringify({ metrics: populatedTrends })
       })
       const data = await res.json()
       const aiSummary = data.summary || "AI Summary unavailable."
 
-      // 2. Capture charts as image
       const chartsContainer = document.getElementById("charts-container")
       let chartImgData = null
       if (chartsContainer) {
-        // Temporarily adjust styles for better screenshot
         const originalBg = chartsContainer.style.background
         chartsContainer.style.background = 'white'
+        // Filter out empty state elements for PDF generation to keep it clean
+        const emptyStates = chartsContainer.querySelectorAll('.empty-state-chart')
+        emptyStates.forEach((el: any) => el.style.display = 'none')
+        
         const canvas = await html2canvas(chartsContainer, { scale: 2 })
         chartImgData = canvas.toDataURL('image/png')
+        
+        emptyStates.forEach((el: any) => el.style.display = 'flex')
         chartsContainer.style.background = originalBg
       }
 
-      // 3. Assemble PDF
       const doc = new jsPDF()
-      
-      // Header
       doc.setFontSize(22)
-      doc.setTextColor(13, 148, 136) // Teal color for BioBytes
+      doc.setTextColor(13, 148, 136)
       doc.text("BioBytes e-health tracker", 105, 20, { align: "center" })
       
       doc.setFontSize(16)
@@ -70,7 +85,6 @@ export default function TrendsPage() {
       doc.setFontSize(10)
       doc.text(`Generated: ${new Date().toLocaleDateString()}`, 105, 38, { align: "center" })
       
-      // AI Summary Section
       doc.setFontSize(14)
       doc.setFont("helvetica", "bold")
       doc.text("AI Doctor Summary & Advice", 15, 50)
@@ -82,7 +96,6 @@ export default function TrendsPage() {
       
       let currentY = 60 + (splitSummary.length * 5)
       
-      // Charts Section
       if (chartImgData) {
         if (currentY > 200) {
           doc.addPage()
@@ -90,17 +103,13 @@ export default function TrendsPage() {
         } else {
           currentY += 10
         }
-        
         doc.setFontSize(14)
         doc.setFont("helvetica", "bold")
         doc.text("Historical Data Comparison", 15, currentY)
-        
-        // Add image (x, y, width, height)
         doc.addImage(chartImgData, 'PNG', 15, currentY + 5, 180, 100)
         currentY += 115
       }
       
-      // Footer Disclaimer
       doc.setFontSize(8)
       doc.setTextColor(150, 150, 150)
       doc.text(
@@ -108,7 +117,6 @@ export default function TrendsPage() {
         105, 285, { align: "center" }
       )
       
-      // Save PDF
       doc.save("BioBytes_Trend_Report.pdf")
       
     } catch (err) {
@@ -120,7 +128,7 @@ export default function TrendsPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
+    <div className="space-y-6 max-w-6xl mx-auto pb-10">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Health Trends</h1>
@@ -130,7 +138,7 @@ export default function TrendsPage() {
           <select 
             value={months} 
             onChange={(e) => setMonths(Number(e.target.value))}
-            className="flex h-10 w-[180px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="flex h-10 w-[180px] rounded-md border border-input bg-background/50 backdrop-blur-sm px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 shadow-sm"
             disabled={generatingPdf}
           >
             <option value={3}>Last 3 Months</option>
@@ -140,87 +148,155 @@ export default function TrendsPage() {
           
           <Button 
             onClick={generatePDF} 
-            disabled={loading || generatingPdf || trends.length === 0}
-            className="flex items-center gap-2"
+            disabled={loading || generatingPdf || trends.filter(t => t.history.length > 0).length === 0}
+            className="flex items-center gap-2 shadow-sm"
           >
             <Download className="h-4 w-4" />
-            {generatingPdf ? "Generating..." : "Download AI Trend Report"}
+            {generatingPdf ? "Generating..." : "Download Report"}
           </Button>
         </div>
       </div>
 
+      {/* Interactive Search Bar & Glassmorphism Category Selector */}
+      <div className="flex flex-col space-y-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+          <input 
+            type="text" 
+            placeholder="Search all 100 tests (e.g., Hemoglobin, SGPT, Calcium)..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full h-12 pl-10 pr-4 rounded-xl border border-input bg-background/50 backdrop-blur-md focus:outline-none focus:ring-2 focus:ring-primary shadow-sm transition-all"
+          />
+        </div>
+        
+        <div className="flex flex-wrap gap-2">
+          {categories.map(cat => (
+            <button
+              key={cat}
+              onClick={() => setActiveCategory(cat)}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-all shadow-sm backdrop-blur-md border ${
+                activeCategory === cat 
+                  ? 'bg-primary text-primary-foreground border-primary' 
+                  : 'bg-background/60 text-muted-foreground hover:bg-muted/80 border-border'
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {loading ? (
-        <div className="text-center py-20">Loading trends...</div>
-      ) : trends.filter(t => t.data && t.data.length > 0).length === 0 ? (
-        <div className="text-center py-20 text-muted-foreground">No trend data available for this period.</div>
+        <div className="text-center py-20 flex flex-col items-center">
+          <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
+          <p className="text-muted-foreground font-medium">Loading your health data...</p>
+        </div>
+      ) : filteredTrends.length === 0 ? (
+        <div className="text-center py-20 text-muted-foreground border-2 border-dashed rounded-xl bg-background/50 backdrop-blur-sm">
+          No tests found matching your search.
+        </div>
       ) : (
-        <div id="charts-container" className="grid gap-6 p-2">
-          {trends.filter(t => t.data && t.data.length > 0).map((trend) => (
-            <Card key={trend.code}>
-              <CardHeader>
-                <CardTitle>{trend.name}</CardTitle>
-                <CardDescription>
-                  Reference Range: {trend.refMin} - {trend.refMax} {trend.unit}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="overflow-x-auto overflow-y-hidden w-full">
-                <div className="h-[300px] min-w-[600px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart
-                      data={trend.data}
-                      margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
-                      <XAxis 
-                        dataKey="id" 
-                        tickFormatter={(id) => {
-                          const point = trend.data.find((d: any) => d.id === id)
-                          return point ? formatDate(point.date) : ''
-                        }}
-                        tick={{ fontSize: 12, fill: '#6b7280' }}
-                        axisLine={false}
-                        tickLine={false}
-                      />
-                      <YAxis 
-                        domain={['auto', 'auto']}
-                        tick={{ fontSize: 12, fill: '#6b7280' }}
-                        axisLine={false}
-                        tickLine={false}
-                      />
-                      <Tooltip 
-                        content={({ active, payload }) => {
-                          if (active && payload && payload.length) {
-                            const data = payload[0].payload
-                            const exactDate = new Date(data.date).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
-                            return (
-                              <div className="bg-white p-3 border rounded shadow-md text-sm">
-                                <p className="font-bold text-gray-800">{exactDate}</p>
-                                <p className="text-gray-500 text-xs mb-1">{data.labName || "Lab Report"}</p>
-                                <p className="text-teal-600 font-semibold">{`${data.value} ${trend.unit}`}</p>
-                              </div>
-                            )
-                          }
-                          return null
-                        }}
-                      />
-                      {trend.refMin !== null && trend.refMax !== null && (
-                        <ReferenceArea 
-                          y1={trend.refMin} 
-                          y2={trend.refMax} 
-                          fill="#10b981" 
-                          fillOpacity={0.1} 
-                        />
-                      )}
-                      <Line 
-                        type="monotone" 
-                        dataKey="value" 
-                        stroke="#0d9488" 
-                        strokeWidth={3}
-                        activeDot={{ r: 8 }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
+        <div id="charts-container" className="grid gap-6 p-2 md:grid-cols-2">
+          {filteredTrends.map((trend) => (
+            <Card key={trend.code} className="overflow-hidden bg-background/60 backdrop-blur-xl border-white/20 shadow-lg hover:shadow-xl transition-all duration-300">
+              <CardHeader className="bg-gradient-to-r from-primary/5 to-transparent pb-4">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <CardTitle className="text-lg text-primary">{trend.name}</CardTitle>
+                    <CardDescription className="font-medium mt-1">
+                      {trend.category}
+                    </CardDescription>
+                  </div>
+                  {trend.refMin !== null && trend.refMax !== null && (
+                    <div className="text-right">
+                      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">Reference Range</span>
+                      <span className="text-sm font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md border border-emerald-100">
+                        {trend.refMin} - {trend.refMax} {trend.unit}
+                      </span>
+                    </div>
+                  )}
                 </div>
+              </CardHeader>
+              
+              <CardContent className="p-0">
+                {trend.history.length > 0 ? (
+                  <div className="h-[280px] w-full p-4">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart
+                        data={trend.history}
+                        margin={{ top: 20, right: 30, left: 10, bottom: 5 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
+                        <XAxis 
+                          dataKey="id" 
+                          tickFormatter={(id) => {
+                            const point = trend.history.find((d: any) => d.id === id)
+                            return point ? formatDate(point.date) : ''
+                          }}
+                          tick={{ fontSize: 12, fill: '#6b7280' }}
+                          axisLine={false}
+                          tickLine={false}
+                        />
+                        <YAxis 
+                          domain={['auto', 'auto']}
+                          tick={{ fontSize: 12, fill: '#6b7280' }}
+                          axisLine={false}
+                          tickLine={false}
+                          width={40}
+                        />
+                        <Tooltip 
+                          content={({ active, payload }) => {
+                            if (active && payload && payload.length) {
+                              const data = payload[0].payload
+                              const exactDate = new Date(data.date).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
+                              return (
+                                <div className="bg-background/95 backdrop-blur-md p-3 border border-border/50 rounded-xl shadow-xl text-sm">
+                                  <p className="font-bold text-foreground">{exactDate}</p>
+                                  <p className="text-muted-foreground text-xs mb-1">{data.labName || "Lab Report"}</p>
+                                  <p className="text-primary font-bold text-lg">{`${data.value} ${trend.unit}`}</p>
+                                </div>
+                              )
+                            }
+                            return null
+                          }}
+                        />
+                        {trend.refMin !== null && trend.refMax !== null && (
+                          <ReferenceArea 
+                            y1={trend.refMin} 
+                            y2={trend.refMax} 
+                            fill="#10b981" 
+                            fillOpacity={0.08} 
+                          />
+                        )}
+                        <Line 
+                          type="monotone" 
+                          dataKey="value" 
+                          stroke="hsl(var(--primary))" 
+                          strokeWidth={4}
+                          activeDot={{ r: 8, fill: "hsl(var(--primary))", stroke: "white", strokeWidth: 2 }}
+                          dot={{ r: 4, fill: "hsl(var(--primary))", strokeWidth: 0 }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  // BEAUTIFUL EMPTY STATE FOR TESTS WITH NO DATA
+                  <div className="empty-state-chart h-[280px] w-full flex flex-col items-center justify-center p-6 text-center bg-gradient-to-b from-transparent to-muted/20">
+                    <div className="h-16 w-16 rounded-full bg-muted/50 flex items-center justify-center mb-4 shadow-inner">
+                      <FileX className="h-8 w-8 text-muted-foreground/50" />
+                    </div>
+                    <h3 className="font-semibold text-foreground/80 mb-2">No historical data</h3>
+                    <p className="text-sm text-muted-foreground max-w-[250px] mb-6">
+                      No data available yet. Upload your next report to start tracking {trend.name}.
+                    </p>
+                    <Link href="/patient/upload">
+                      <Button variant="outline" size="sm" className="rounded-full shadow-sm hover:shadow-md transition-all">
+                        Upload Report
+                      </Button>
+                    </Link>
+                  </div>
+                )}
               </CardContent>
             </Card>
           ))}
