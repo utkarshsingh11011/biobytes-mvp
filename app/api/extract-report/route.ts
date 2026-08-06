@@ -3,11 +3,51 @@ import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth"
 import { PrismaClient } from "@prisma/client"
 import Tesseract from "tesseract.js"
-import { extractText, getDocumentProxy } from "unpdf"
+import { extractText } from "unpdf"
+import { GoogleGenAI } from "@google/genai"
 
 const prisma = new PrismaClient()
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
 
-export const maxDuration = 60 // Allow longer execution time for Vercel Serverless
+export const maxDuration = 60 
+
+const SYSTEM_PROMPT = `Role: You are a high-precision medical data parser. Your only job is to extract medical test results from raw OCR text and map them STRICTLY to a predefined list of allowed test keys.
+
+CORE DIRECTIVES (CRITICAL):
+1. ZERO HALLUCINATION: You must never guess, infer, or combine tests. 
+2. STRICT MAPPING: You are only allowed to output tests that exist in the "ALLOWED_TEST_KEYS" array below. 
+3. EXACT DISTINCTION: Pay absolute attention to prefixes and suffixes. "Total Cholesterol" is strictly different from "LDL Cholesterol". "Direct Bilirubin" is strictly different from "Total Bilirubin". Do not mix them up.
+4. UNMAPPED DATA: If a test in the OCR text does not perfectly match the clinical intent of a key in the allowed list, completely ignore it. Do not invent new keys.
+
+ALLOWED_TEST_KEYS (100 Common Indian Lab Tests):
+"Hemoglobin", "RBC Count", "WBC Count (Total Leukocyte Count)", "Platelet Count", "Hematocrit (PCV)", "MCV (Mean Corpuscular Volume)", "MCH (Mean Corpuscular Hemoglobin)", "MCHC", "Neutrophils", "Lymphocytes", "Monocytes", "Eosinophils", "Basophils", "ESR (Erythrocyte Sedimentation Rate)",
+"Total Cholesterol", "HDL Cholesterol", "LDL Cholesterol", "VLDL Cholesterol", "Triglycerides", "Total Cholesterol / HDL Ratio",
+"Total Bilirubin", "Direct Bilirubin", "Indirect Bilirubin", "SGOT (AST)", "SGPT (ALT)", "Alkaline Phosphatase (ALP)", "Total Protein", "Albumin", "Globulin", "A/G Ratio", "Gamma GT (GGT)",
+"Blood Urea Nitrogen (BUN)", "Blood Urea", "Serum Creatinine", "Uric Acid", "Serum Sodium", "Serum Potassium", "Serum Chloride", "Serum Calcium", "Serum Phosphorus",
+"Fasting Blood Sugar (FBS)", "Post Prandial Blood Sugar (PPBS)", "Random Blood Sugar (RBS)", "HbA1c (Glycosylated Hemoglobin)", "Average Blood Glucose", "Fasting Insulin",
+"Total T3", "Total T4", "Free T3 (FT3)", "Free T4 (FT4)", "TSH (Thyroid Stimulating Hormone)",
+"Vitamin D (25-OH)", "Vitamin B12", "Serum Iron", "Total Iron Binding Capacity (TIBC)", "Ferritin", "Transferrin Saturation", "Folic Acid (Folate)", "Magnesium", "Zinc",
+"Widal Test (Typhoid)", "Dengue NS1 Antigen", "Dengue IgG", "Dengue IgM", "Malaria Parasite (MP)", "Chikungunya IgM", "HBsAg (Hepatitis B)", "Anti-HCV (Hepatitis C)", "HIV 1 & 2 Antibodies", "VDRL (Syphilis)", "CRP (C-Reactive Protein)", "hs-CRP (High Sensitivity CRP)", "Procalcitonin",
+"Urine pH", "Urine Specific Gravity", "Urine Protein / Albumin", "Urine Glucose / Sugar", "Urine Ketones", "Urine Bilirubin", "Urine Urobilinogen", "Urine Blood", "Urine Pus Cells", "Urine RBC", "Urine Epithelial Cells", "Urine Casts", "Urine Crystals",
+"Troponin I", "Troponin T", "CPK-MB", "CPK Total", "D-Dimer", "PT (Prothrombin Time)", "INR", "APTT",
+"Prolactin", "FSH (Follicle Stimulating Hormone)", "LH (Luteinizing Hormone)", "Testosterone (Total)", "Estradiol (E2)",
+"PSA (Prostate Specific Antigen)", "CA-125 (Ovarian)", "CEA (Carcinoembryonic Antigen)", "Rheumatoid Factor (RA Test)", "Anti-CCP", "ANA (Anti-Nuclear Antibody)", "IgE Total", "Serum Amylase", "Serum Lipase"
+
+Task: Review the provided OCR text. Extract the values and units only for the tests that map directly to the ALLOWED_TEST_KEYS.
+
+Required JSON Output Format:
+{
+  "report_date": "YYYY-MM-DD",
+  "lab_name": "String",
+  "patient_name": "String",
+  "extracted_data": [
+    {
+      "test_key": "MUST EXACTLY MATCH A STRING FROM ALLOWED_TEST_KEYS",
+      "value": "Number",
+      "unit": "String"
+    }
+  ]
+}`
 
 export async function POST(req: Request) {
   try {
@@ -16,7 +56,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Verify the user still exists in the database (handles stale JWT cookies after a DB reset)
     const userExists = await prisma.user.findUnique({
       where: { id: session.user.id }
     })
@@ -64,249 +103,93 @@ export async function POST(req: Request) {
       throw new Error("Could not extract any text from the document.")
     }
 
-    // REGEX PARSING LOGIC
-    const parsedData: any = {
-      patient_name: null,
-      lab_name: "BioBytes Automated Lab",
-      report_date: new Date().toISOString().split('T')[0],
-      overall_summary: "Automated extraction using Tesseract.js and PDF-Parse.",
-      biomarkers: []
-    }
-
-    // Try to extract patient name
-    const nameMatch = extractedText.match(/(?:name|patient name|patient)\s*[:\-]?\s*([A-Za-z\s\.]+)/i)
-    if (nameMatch && nameMatch[1]) {
-      let rawName = nameMatch[1].trim().substring(0, 50)
-      rawName = rawName.replace(/^(mr\.|mrs\.|ms\.|dr\.|mr|mrs|ms|dr)\s+/i, '').trim()
-      parsedData.patient_name = rawName
-    }
-
-    // Try to extract Report Date
-    let reportDateMatch = extractedText.match(/(?:date|registered on|collected on|collection date|reported on)[\s\:\-]*(\d{1,2}[\/\-][a-zA-Z]{3,4}[\/\-]\d{2,4}|\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{1,2}\s+[a-zA-Z]{3,10}\s+\d{2,4}|[a-zA-Z]{3,10}\s+\d{1,2},?\s+\d{2,4}|\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2})/i)
-    if (!reportDateMatch) {
-      // Fallback: just find the first date looking string in the document
-      reportDateMatch = extractedText.match(/\b(\d{1,2}[\/\-][a-zA-Z]{3,4}[\/\-]\d{2,4}|\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{1,2}\s+[a-zA-Z]{3,10}\s+\d{2,4}|[a-zA-Z]{3,10}\s+\d{1,2},?\s+\d{2,4}|\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2})\b/i)
-    }
-    
-    if (reportDateMatch && reportDateMatch[1]) {
-      try {
-        let dateStr = reportDateMatch[1].replace(/[\/\-]/g, ' ').replace(/,/g, '').trim()
-        let parsedDate: Date
-        
-        const parts = dateStr.split(/\s+/)
-        if (parts.length === 3 && !isNaN(Number(parts[0])) && !isNaN(Number(parts[1])) && !isNaN(Number(parts[2]))) {
-           let p1 = parts[0]
-           let p2 = parts[1]
-           let p3 = parts[2]
-           
-           if (p1.length === 4) {
-             // YYYY MM DD
-             parsedDate = new Date(`${p1}-${p2.padStart(2, '0')}-${p3.padStart(2, '0')}T00:00:00Z`)
-           } else {
-             // DD MM YYYY
-             let year = p3
-             if (year.length === 2) year = "20" + year
-             parsedDate = new Date(`${year}-${p2.padStart(2, '0')}-${p1.padStart(2, '0')}T00:00:00Z`)
-           }
-        } else {
-           parsedDate = new Date(dateStr)
-        }
-
-        if (!isNaN(parsedDate.getTime())) {
-          parsedData.report_date = parsedDate.toISOString().split('T')[0]
-        }
-      } catch (e) {
-        // Ignore and keep default today's date
+    // Call Gemini with the strict prompt
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: [
+        { role: 'user', parts: [{ text: `OCR TEXT TO PROCESS:\n\n${extractedText}` }] }
+      ],
+      config: {
+        systemInstruction: SYSTEM_PROMPT,
+        temperature: 0.1,
+        responseMimeType: "application/json"
       }
+    })
+
+    const responseText = response.text
+    if (!responseText) {
+      throw new Error("AI returned empty response")
     }
 
-    // Try to extract Lab Name
-    const labMatch = extractedText.match(/(Dr\s*Lal\s*PathLabs|Apollo\s*Diagnostics|Thyrocare|SRL\s*Diagnostics|Metropolis|Redcliffe|Max\s*Healthcare|Suburban\s*Diagnostics|Tata\s*1mg|Lucid\s*Medical|Vijaya\s*Diagnostic|[A-Za-z0-9\s]{3,25}(?:Diagnostics|Pathology|Labs|Laboratory|Clinic))/i)
-    if (labMatch && labMatch[0]) {
-      parsedData.lab_name = labMatch[0].trim().substring(0, 40)
+    let parsedData
+    try {
+      parsedData = JSON.parse(responseText)
+    } catch (e) {
+      throw new Error("AI returned invalid JSON")
     }
 
-    // Variables for UserHealthRecord legacy table
-    let hr_hemoglobin: number | null = null;
-    let hr_fasting_blood_sugar: number | null = null;
-    let hr_total_cholesterol: number | null = null;
-    let hr_ldl_cholesterol: number | null = null;
-    let hr_thyroid_tsh: number | null = null;
-    let hr_vitamin_d: number | null = null;
-    let hr_vitamin_b12: number | null = null;
-    let hr_calcium: number | null = null;
+    // Save to Database
+    const reportDate = parsedData.report_date ? new Date(parsedData.report_date) : new Date()
 
-    const extractBiomarker = (regexes: RegExp[], name: string, unit: string) => {
-      for (const regex of regexes) {
-        const match = extractedText.match(regex)
-        if (match && match[1]) {
-          const value = parseFloat(match[1])
-          if (!isNaN(value)) {
-            parsedData.biomarkers.push({
-              name,
-              value,
-              unit,
-              isAbnormal: false
-            })
-            return value;
-          }
-        }
-      }
-      return null;
-    }
-
-    // HEMOGLOBIN
-    hr_hemoglobin = extractBiomarker([
-      /(?:hemoglobin|hb|haemoglobin)[^\d]{0,40}?([\d\.]+)/i,
-    ], "Hemoglobin", "g/dL")
-
-    // FASTING SUGAR
-    hr_fasting_blood_sugar = extractBiomarker([
-      /(?:fasting blood sugar|fbs|fasting plasma glucose|fpg)[^\d]{0,40}?([\d\.]+)/i,
-    ], "Fasting Blood Sugar", "mg/dL")
-
-    // STRICT TOTAL CHOLESTEROL
-    hr_total_cholesterol = extractBiomarker([
-      /(?<!LDL\s*|HDL\s*|VLDL\s*)(?:Total\s*)?Cholesterol(?:\s*\(?Total\)?)?[^\d]{0,40}?([\d\.]+)/i,
-    ], "Total Cholesterol", "mg/dL")
-
-    // STRICT LDL CHOLESTEROL
-    hr_ldl_cholesterol = extractBiomarker([
-      /LDL(?:\s*Cholesterol)?[^\d]{0,40}?([\d\.]+)/i,
-    ], "LDL Cholesterol", "mg/dL")
-
-    // TSH
-    hr_thyroid_tsh = extractBiomarker([
-      /(?:tsh|thyroid stimulating hormone)[^\d]{0,40}?([\d\.]+)/i,
-    ], "Thyroid TSH", "uIU/mL")
-
-    // VITAMIN D
-    hr_vitamin_d = extractBiomarker([
-      /(?:vitamin d|vit d|25-oh vitamin d)[^\d]{0,40}?([\d\.]+)/i,
-    ], "Vitamin D", "ng/mL")
-
-    // VITAMIN B12
-    hr_vitamin_b12 = extractBiomarker([
-      /(?:vitamin b12|vit b12)[^\d]{0,40}?([\d\.]+)/i,
-    ], "Vitamin B12", "pg/mL")
-
-    // CALCIUM
-    hr_calcium = extractBiomarker([
-      /(?:calcium|total calcium)[^\d]{0,40}?([\d\.]+)/i,
-    ], "Calcium", "mg/dL")
-
-    // Ensure we generate some AI Summary text so it's not empty on the dashboard
-    const abnormalities = parsedData.biomarkers.filter((b: any) => b.isAbnormal)
-    if (parsedData.biomarkers.length > 0) {
-      parsedData.overall_summary = `Successfully extracted ${parsedData.biomarkers.length} health metrics (e.g. ${parsedData.biomarkers.map((b: any) => b.name).join(", ")}). Please consult with your doctor for a detailed clinical assessment.`
-    } else {
-      parsedData.overall_summary = "Could not extract standard biomarkers. Please ensure the PDF is a standard lab report."
-    }
-
-    // Identity Verification
-    let reportPatientName = (parsedData.patient_name || "").toLowerCase()
-    const accountPatientName = (session.user.name || "").toLowerCase()
-    
-    if (reportPatientName && accountPatientName) {
-      reportPatientName = reportPatientName.replace(/^(mr\.|mrs\.|ms\.|dr\.|mr|mrs|ms|dr)\s+/i, '')
-      const reportNameParts = reportPatientName.split(" ").filter(Boolean)
-      const isMatch = reportNameParts.some((part: string) => accountPatientName.includes(part) && part.length > 2)
-      
-      if (!isMatch) {
-        return NextResponse.json({ 
-          error: `Identity mismatch. The report belongs to "${parsedData.patient_name || reportPatientName}", but this account belongs to "${session.user.name}". For security, this upload was blocked.` 
-        }, { status: 403 })
-      }
-    }
-
-    // Hardcoded Database Routing (Strict Schema Mapping)
     const report = await prisma.report.create({
       data: {
         patientId: session.user.id,
         fileName: file.name,
-        fileUrl: "/placeholder.pdf", // Normally would be uploaded to S3/Cloudinary
+        fileUrl: "/uploads/" + file.name,
         status: "PARSED",
-        parsedJson: JSON.stringify(parsedData), // Save parsed JSON string instead of raw text
-        aiSummary: parsedData.overall_summary || null,
-        labName: parsedData.lab_name,
-        reportDate: parsedData.report_date ? new Date(parsedData.report_date) : new Date(),
-      },
+        rawText: extractedText.substring(0, 5000), // Trim for DB limit
+        parsedJson: JSON.stringify(parsedData),
+        aiSummary: "Automated extraction using AI Data Parser.",
+        reportDate: isNaN(reportDate.getTime()) ? new Date() : reportDate,
+        labName: parsedData.lab_name || "BioBytes Automated Lab",
+      }
     })
 
-    // Dynamic Biomarker Routing
-    if (parsedData.biomarkers && Array.isArray(parsedData.biomarkers)) {
-      for (const b of parsedData.biomarkers) {
-        if (!b.name || b.value === null || b.value === undefined) continue;
+    if (parsedData.extracted_data && Array.isArray(parsedData.extracted_data)) {
+      // Fetch all available biomarker definitions to match
+      const allDefinitions = await prisma.biomarkerDefinition.findMany()
+      const defMap = new Map()
+      allDefinitions.forEach(def => {
+        defMap.set(def.displayName, def)
+      })
 
-        const BIOMARKER_MAP: Record<string, { code: string, displayName: string }> = {
-          "hemoglobin": { code: "HEMOGLOBIN", displayName: "Hemoglobin" },
-          "fasting blood sugar": { code: "FASTING_SUGAR", displayName: "Fasting Blood Sugar" },
-          "total cholesterol": { code: "CHOLESTEROL", displayName: "Total Cholesterol" },
-          "ldl cholesterol": { code: "LDL", displayName: "LDL Cholesterol" },
-          "thyroid tsh": { code: "TSH", displayName: "Thyroid TSH" },
-          "calcium": { code: "CALCIUM", displayName: "Calcium" },
-          "vitamin d": { code: "VITAMIN_D", displayName: "Vitamin D" },
-          "vitamin b12": { code: "VITAMIN_B12", displayName: "Vitamin B12" }
-        };
-
-        const cleanName = b.name.toLowerCase().trim();
+      const metricsToCreate = []
+      
+      for (const item of parsedData.extracted_data) {
+        if (!item.test_key || item.value === null || item.value === undefined) continue;
         
-        let code = b.name.toUpperCase().replace(/[^A-Z0-9]/g, '_');
-        let finalDisplayName = b.name;
+        // Exact match required by the prompt
+        const biomarkerDef = defMap.get(item.test_key)
+        
+        if (biomarkerDef) {
+          const numValue = parseFloat(String(item.value).replace(/[^0-9.]/g, ''))
+          if (isNaN(numValue)) continue;
 
-        for (const [key, mapping] of Object.entries(BIOMARKER_MAP)) {
-          if (cleanName.includes(key)) {
-            code = mapping.code;
-            finalDisplayName = mapping.displayName;
-            break;
-          }
-        }
+          // Determine abnormality
+          let isAbnormal = false
+          if (biomarkerDef.refMin !== null && numValue < biomarkerDef.refMin) isAbnormal = true
+          if (biomarkerDef.refMax !== null && numValue > biomarkerDef.refMax) isAbnormal = true
 
-        let biomarkerDef = await prisma.biomarkerDefinition.findFirst({
-          where: { code }
-        });
-
-        if (!biomarkerDef) {
-          biomarkerDef = await prisma.biomarkerDefinition.create({
-            data: {
-              code,
-              displayName: finalDisplayName,
-              unit: b.unit || "",
-              category: "Extracted",
-            }
-          });
-        }
-
-        await prisma.extractedMetric.create({
-          data: {
+          metricsToCreate.push({
             reportId: report.id,
             biomarkerId: biomarkerDef.id,
-            value: b.value,
-            unit: b.unit || biomarkerDef.unit,
-            refMin: biomarkerDef.refMin,
-            refMax: biomarkerDef.refMax,
-            isAbnormal: b.isAbnormal || false,
-          }
-        });
+            value: numValue,
+            unit: item.unit || biomarkerDef.unit,
+            isAbnormal: isAbnormal
+          })
+        }
+      }
+
+      if (metricsToCreate.length > 0) {
+        await prisma.extractedMetric.createMany({
+          data: metricsToCreate
+        })
       }
     }
 
-    const healthRecord = await prisma.userHealthRecord.create({
-      data: {
-        reportId: report.id,
-        patientId: session.user.id,
-        hemoglobin: hr_hemoglobin,
-        fasting_blood_sugar: hr_fasting_blood_sugar,
-        thyroid_tsh: hr_thyroid_tsh,
-        ldl_cholesterol: hr_ldl_cholesterol, // Fixed mapping
-        vitamin_d: hr_vitamin_d,
-        vitamin_b12: hr_vitamin_b12
-      },
-    })
-
-    return NextResponse.json({ success: true, report, healthRecord })
+    return NextResponse.json({ success: true, reportId: report.id })
   } catch (error: any) {
     console.error("Extraction error:", error)
-    return NextResponse.json({ error: error?.message || "Failed to process report" }, { status: 500 })
+    return NextResponse.json({ error: error.message || "Failed to process the report" }, { status: 500 })
   }
 }
