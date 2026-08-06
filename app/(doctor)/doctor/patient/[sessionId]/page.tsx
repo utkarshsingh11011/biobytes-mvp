@@ -2,7 +2,7 @@ import { PrismaClient } from "@prisma/client"
 import { notFound } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { AlertCircle, User, FileText } from "lucide-react"
-import DoctorTrendsChart from "./DoctorTrendsChart"
+import { PatientTrendsDashboard } from "@/components/PatientTrendsDashboard"
 
 const prisma = new PrismaClient()
 
@@ -144,8 +144,8 @@ export default async function DoctorPatientView({ params }: { params: Promise<{ 
           <CardTitle>Biomarker Trends Overview</CardTitle>
           <CardDescription>Clinical visualizations of patient biomarker history.</CardDescription>
         </CardHeader>
-        <CardContent>
-          <DoctorTrendsChart metrics={metrics} />
+        <CardContent className="p-0 border-0 bg-transparent shadow-none">
+          <PatientTrendsDashboard accessCode={code} />
         </CardContent>
       </Card>
 

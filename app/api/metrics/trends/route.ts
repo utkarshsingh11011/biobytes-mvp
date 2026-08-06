@@ -7,12 +7,30 @@ const prisma = new PrismaClient()
 
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions)
-  if (!session || session.user.role !== "PATIENT") {
+  if (!session) {
     return new Response("Unauthorized", { status: 401 })
   }
 
   const { searchParams } = new URL(req.url)
   const months = parseInt(searchParams.get("months") || "6")
+  const accessCode = searchParams.get("accessCode")
+
+  let targetPatientId = session.user.id
+
+  if (session.user.role === "DOCTOR") {
+    if (!accessCode) {
+      return new Response("Doctor requires accessCode query parameter", { status: 400 })
+    }
+    const access = await prisma.doctorAccessCode.findUnique({
+      where: { code: accessCode }
+    })
+    if (!access || access.isRevoked || access.expiresAt < new Date()) {
+      return new Response("Invalid, expired, or revoked access code", { status: 403 })
+    }
+    targetPatientId = access.patientId
+  } else if (session.user.role !== "PATIENT") {
+    return new Response("Unauthorized", { status: 401 })
+  }
 
   const dateLimit = new Date()
   if (months === 3) dateLimit.setDate(dateLimit.getDate() - 90)
@@ -38,7 +56,7 @@ export async function GET(req: Request) {
   const metrics = await prisma.extractedMetric.findMany({
     where: {
       report: {
-        patientId: session.user.id,
+        patientId: targetPatientId,
         reportDate: { gte: dateLimit }
       }
     },
@@ -68,7 +86,7 @@ export async function GET(req: Request) {
   // 3. Fetch legacy data from UserHealthRecord
   const healthRecords = await prisma.userHealthRecord.findMany({
     where: { 
-      patientId: session.user.id, 
+      patientId: targetPatientId, 
       report: { reportDate: { gte: dateLimit } }
     },
     include: { report: { select: { reportDate: true, labName: true } } },
