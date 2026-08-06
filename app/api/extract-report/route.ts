@@ -167,13 +167,12 @@ export async function POST(req: Request) {
 
     // STRICT TOTAL CHOLESTEROL
     hr_total_cholesterol = extractBiomarker([
-      /Total\s+Cholesterol[^\d]{0,40}?([\d\.]+)/i,
-      /Cholesterol\s+Total[^\d]{0,40}?([\d\.]+)/i,
+      /(?<!LDL\s*|HDL\s*|VLDL\s*)(?:Total\s*)?Cholesterol(?:\s*\(?Total\)?)?[^\d]{0,40}?([\d\.]+)/i,
     ], "Total Cholesterol", "mg/dL")
 
     // STRICT LDL CHOLESTEROL
     hr_ldl_cholesterol = extractBiomarker([
-      /LDL[^\d]{0,40}?([\d\.]+)/i,
+      /LDL(?:\s*Cholesterol)?[^\d]{0,40}?([\d\.]+)/i,
     ], "LDL Cholesterol", "mg/dL")
 
     // TSH
