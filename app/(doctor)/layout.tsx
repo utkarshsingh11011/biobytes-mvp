@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { Activity, LayoutDashboard, Users, Settings, LogOut } from "lucide-react"
-import { BackButton } from "@/components/BackButton"
+import { BackButton } from "@frontend/components/BackButton"
 
 export default function DoctorLayout({ children }: { children: React.ReactNode }) {
   return (

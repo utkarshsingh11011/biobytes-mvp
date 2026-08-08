@@ -1,9 +1,9 @@
 import { getServerSession } from "next-auth/next"
-import { authOptions } from "@/lib/auth"
+import { authOptions } from "@backend/config/auth"
 import { redirect } from "next/navigation"
 import Link from "next/link"
 import { Activity, LayoutDashboard, LineChart, LogOut, UploadCloud, Calendar, HeartHandshake } from "lucide-react"
-import { BackButton } from "@/components/BackButton"
+import { BackButton } from "@frontend/components/BackButton"
 
 export default async function PatientLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions)

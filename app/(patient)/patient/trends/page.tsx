@@ -1,5 +1,1 @@
-import { PatientTrendsDashboard } from "@/components/PatientTrendsDashboard"
-
-export default function TrendsPage() {
-  return <PatientTrendsDashboard />
-}
+export { default } from "@frontend/features/patient/pages/trends/page";
