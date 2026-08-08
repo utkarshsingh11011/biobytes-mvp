@@ -168,11 +168,14 @@ export default function Home() {
           </div>
         </section>
       </main>
-      
-      <footer className="w-full border-t bg-muted/40 py-8">
-        <div className="container flex flex-col md:flex-row justify-between items-center max-w-6xl mx-auto px-4 gap-4 text-sm text-muted-foreground">
-          <p>© 2026 BioBytes e-health tracker. SIH Prototype.</p>
-          <div className="flex space-x-6">
+      <footer className="w-full border-t bg-foreground text-background py-12">
+        <div className="container flex flex-col md:flex-row justify-between items-center max-w-6xl mx-auto px-4 gap-6">
+          <div className="flex items-center space-x-3">
+            <img src="/qurix-logo.jpg" alt="QURIX Logo" className="h-8 w-8 object-contain rounded-md" />
+            <span className="font-bold text-xl tracking-tight">QURIX</span>
+          </div>
+          <p className="text-sm opacity-80">© 2026 QURIX Super App.</p>
+          <div className="flex space-x-6 text-sm opacity-80">
             <span className="flex items-center"><ShieldCheck className="h-4 w-4 mr-1" /> Secure & Encrypted</span>
             <span>ABHA-ready Architecture</span>
           </div>
