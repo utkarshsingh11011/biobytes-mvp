@@ -10,9 +10,11 @@ export function Navbar() {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-white/20 glass-panel">
       <div className="container flex h-16 max-w-7xl mx-auto items-center justify-between px-4">
-        <Link href="/" className="flex items-center space-x-2 group">
-          <Activity className="h-6 w-6 text-primary transition-transform group-hover:scale-110" />
-          <span className="font-bold text-xl tracking-tight text-foreground">BioBytes e-health tracker</span>
+        <Link href="/" className="flex items-center space-x-2">
+          <img src="/qurix-logo.jpg" alt="QURIX Logo" className="h-8 w-8 object-contain rounded-md" />
+          <span className="font-bold text-xl tracking-tight text-slate-800">
+            QURIX
+          </span>
         </Link>
         <nav className="hidden md:flex items-center space-x-8 text-sm font-medium">
           <Link href="/patients" className="transition-colors text-muted-foreground hover:text-primary hover:scale-105">Patients</Link>

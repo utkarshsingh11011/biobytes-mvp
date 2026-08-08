@@ -13,25 +13,33 @@ export default function Home() {
         <section className="w-full py-24 lg:py-32 bg-gradient-to-b from-teal-50/50 to-white dark:from-teal-950/20 dark:to-background">
           <div className="container px-4 md:px-6 max-w-6xl mx-auto text-center space-y-8">
             <div className="space-y-4">
-              <h1 className="text-4xl md:text-6xl font-extrabold tracking-tighter sm:text-5xl">
-                Your health history, <br className="hidden sm:block" />
+              <div className="inline-block px-4 py-1.5 rounded-full bg-teal-100 text-teal-800 font-medium text-sm mb-4">
+                "क्यों रिस्क, when QURIX is here™"
+              </div>
+              <h1 className="text-4xl md:text-6xl font-extrabold tracking-tighter sm:text-5xl max-w-4xl mx-auto">
+                Healthcare shouldn't weigh you down. <br className="hidden sm:block" />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-emerald-500">
-                  digitized and shared in seconds.
+                  Experience Antigravity with QURIX.
                 </span>
               </h1>
-              <p className="mx-auto max-w-[700px] text-muted-foreground md:text-xl">
-                Upload lab reports, track biomarkers over time, and give your doctor instant context with a secure access code.
-              </p>
+              <div className="mx-auto max-w-[800px] text-muted-foreground md:text-xl space-y-4">
+                <p>
+                  Tired of carrying the heavy burden of physical medical reports? Exhausted by the crushing weight of endless waiting room hours? It's time to drop the baggage.
+                </p>
+                <p>
+                  Welcome to QURIX, your zero-friction healthcare super app. We've eliminated the waiting times, digitized your entire medical history, and automated your medicine deliveries. It's healthcare that feels weightless.
+                </p>
+              </div>
             </div>
             <div className="flex flex-col sm:flex-row justify-center items-center gap-4 pt-4">
-              <Link href="/login">
-                <Button size="lg" className="w-full sm:w-auto h-14 px-8 text-lg rounded-full shadow-lg hover:shadow-xl transition-all">
+              <Link href="/register">
+                <Button size="lg" className="w-full sm:w-auto h-14 px-8 text-lg rounded-full shadow-lg hover:shadow-xl transition-all bg-primary text-primary-foreground">
                   <UploadCloud className="mr-2 h-5 w-5" />
-                  Upload First Report — Free
+                  Drop the weight. Join the Beta
                 </Button>
               </Link>
               <Link href="/doctor/access">
-                <Button size="lg" variant="outline" className="w-full sm:w-auto h-14 px-8 text-lg rounded-full border-2">
+                <Button size="lg" variant="outline" className="w-full sm:w-auto h-14 px-8 text-lg rounded-full border-2 text-foreground border-foreground/20 hover:bg-slate-50">
                   <Stethoscope className="mr-2 h-5 w-5" />
                   Doctor Access Code
                 </Button>
@@ -44,21 +52,21 @@ export default function Home() {
         <section className="w-full py-20 bg-slate-50 dark:bg-slate-900/50">
           <div className="container px-4 md:px-6 max-w-6xl mx-auto">
             <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-4">How BioBytes e-health tracker Works</h2>
-              <p className="text-muted-foreground">Four simple steps to take control of your health data.</p>
+              <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-4 text-foreground">Float into your next appointment</h2>
+              <p className="text-muted-foreground">With priority booking, AI-powered insights, and automated care routines.</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
               {[
-                { icon: FileText, title: "1. Upload", desc: "Upload your physical or PDF lab reports." },
-                { icon: ActivitySquare, title: "2. Extract", desc: "Our AI instantly parses key biomarkers." },
-                { icon: LineChart, title: "3. Track", desc: "Visualize trends over 3, 6, or 12 months." },
-                { icon: ShieldCheck, title: "4. Share", desc: "Generate a secure code for your doctor." },
+                { icon: FileText, title: "Digitize", desc: "Instantly upload physical or PDF lab reports." },
+                { icon: ActivitySquare, title: "Extract", desc: "Our AI effortlessly parses key biomarkers." },
+                { icon: LineChart, title: "Track", desc: "Visualize trends over time automatically." },
+                { icon: ShieldCheck, title: "Share", desc: "Generate a secure, zero-friction code for your doctor." },
               ].map((step, i) => (
                 <div key={i} className="flex flex-col items-center text-center space-y-3">
                   <div className="flex h-16 w-16 items-center justify-center rounded-full bg-teal-100 dark:bg-teal-900/50 text-teal-600 dark:text-teal-400">
                     <step.icon className="h-8 w-8" />
                   </div>
-                  <h3 className="text-xl font-bold">{step.title}</h3>
+                  <h3 className="text-xl font-bold text-foreground">{step.title}</h3>
                   <p className="text-sm text-muted-foreground">{step.desc}</p>
                 </div>
               ))}

@@ -279,7 +279,7 @@ export function PatientTrendsDashboard({ accessCode }: { accessCode?: string }) 
                           <ReferenceArea 
                             y1={trend.refMin} 
                             y2={trend.refMax} 
-                            fill="#10b981" 
+                            fill="#66A573" 
                             fillOpacity={0.08} 
                           />
                         )}

@@ -37,64 +37,64 @@
 
 @layer base {
   :root {
-    --background: 216 33% 98%; /* #F7F9FC */
-    --foreground: 210 73% 15%; /* #0A2540 */
+    --background: 0 0% 100%; /* Clinical White */
+    --foreground: 207 43% 16%; /* Deep Trust Navy */
 
     --card: 0 0% 100%;
-    --card-foreground: 210 73% 15%;
+    --card-foreground: 207 43% 16%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 210 73% 15%;
+    --popover-foreground: 207 43% 16%;
 
-    --primary: 210 73% 15%; /* Deep Blue #0A2540 */
-    --primary-foreground: 210 40% 98%;
+    --primary: 185 37% 48%; /* Tech Teal */
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 173 80% 40%; /* Calming Teal */
+    --secondary: 132 28% 52%; /* Vitality Green */
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 186 33% 94%; /* Soothing Ice Blue */
+    --muted-foreground: 207 20% 40%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 186 33% 94%;
+    --accent-foreground: 207 43% 16%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 210 73% 15%;
-    --radius: 1rem; /* 16px border-radius */
+    --border: 186 20% 90%;
+    --input: 186 20% 90%;
+    --ring: 185 37% 48%;
+    --radius: 1rem;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    --background: 207 43% 10%; /* Dark Navy Background */
+    --foreground: 0 0% 100%;
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --card: 207 43% 12%;
+    --card-foreground: 0 0% 100%;
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 207 43% 12%;
+    --popover-foreground: 0 0% 100%;
 
-    --primary: 173 80% 40%; /* Teal in dark mode */
-    --primary-foreground: 210 40% 98%;
+    --primary: 185 37% 48%; /* Tech Teal */
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 132 28% 52%; /* Vitality Green */
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 207 30% 20%;
+    --muted-foreground: 186 20% 80%;
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 207 30% 20%;
+    --accent-foreground: 0 0% 100%;
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 173 80% 40%;
+    --border: 207 30% 20%;
+    --input: 207 30% 20%;
+    --ring: 185 37% 48%;
   }
 }
 
