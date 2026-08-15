@@ -8,6 +8,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import jsPDF from "jspdf"
 import html2canvas from "html2canvas"
 import dynamic from 'next/dynamic'
+import Link from 'next/link'
 
 const DigitalTwin = dynamic(() => import('@frontend/components/DigitalTwin'), { 
   ssr: false, 
