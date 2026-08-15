@@ -7,7 +7,16 @@ import { Download, Search, FileX } from "lucide-react"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceArea } from 'recharts'
 import jsPDF from "jspdf"
 import html2canvas from "html2canvas"
-import Link from "next/link"
+import dynamic from 'next/dynamic'
+
+const DigitalTwin = dynamic(() => import('@frontend/components/DigitalTwin'), { 
+  ssr: false, 
+  loading: () => (
+    <div className="w-full h-[500px] bg-slate-100 dark:bg-slate-800 animate-pulse rounded-2xl flex items-center justify-center">
+      <p className="text-muted-foreground">Loading 3D Digital Twin...</p>
+    </div>
+  )
+})
 
 export function PatientTrendsDashboard({ accessCode }: { accessCode?: string }) {
   const [trends, setTrends] = useState<any[]>([])
@@ -48,6 +57,8 @@ export function PatientTrendsDashboard({ accessCode }: { accessCode?: string }) 
     const matchesSearch = t.name.toLowerCase().includes(searchQuery.toLowerCase())
     return matchesCategory && matchesSearch
   })
+
+  // ... (generatePDF function remains below)
 
   const generatePDF = async () => {
     setGeneratingPdf(true)
@@ -202,7 +213,12 @@ export function PatientTrendsDashboard({ accessCode }: { accessCode?: string }) 
           No tests found matching your search.
         </div>
       ) : (
-        <div id="charts-container" className="grid gap-6 p-2 md:grid-cols-2">
+        <div className="space-y-8">
+          <div className="w-full">
+            <DigitalTwin trends={trends} />
+          </div>
+          
+          <div id="charts-container" className="grid gap-6 p-2 md:grid-cols-2">
           {filteredTrends.map((trend) => (
             <Card key={trend.code} className="overflow-hidden bg-background/60 backdrop-blur-xl border-white/20 shadow-lg hover:shadow-xl transition-all duration-300">
               <CardHeader className="bg-gradient-to-r from-primary/5 to-transparent pb-4">
@@ -289,7 +305,22 @@ export function PatientTrendsDashboard({ accessCode }: { accessCode?: string }) 
                           stroke="hsl(var(--primary))" 
                           strokeWidth={4}
                           activeDot={{ r: 8, fill: "hsl(var(--primary))", stroke: "white", strokeWidth: 2 }}
-                          dot={{ r: 4, fill: "hsl(var(--primary))", strokeWidth: 0 }}
+                          dot={(props: any) => {
+                            const { cx, cy, payload, value } = props;
+                            const isOutOfRange = trend.refMin !== null && trend.refMax !== null && (value < trend.refMin || value > trend.refMax);
+                            
+                            if (isOutOfRange) {
+                              return (
+                                <g key={`dot-${payload.id}`}>
+                                  <circle cx={cx} cy={cy} r={8} fill="#EF4444" opacity={0.3} className="animate-ping" />
+                                  <circle cx={cx} cy={cy} r={5} fill="#EF4444" stroke="white" strokeWidth={2} />
+                                </g>
+                              );
+                            }
+                            return (
+                              <circle key={`dot-${payload.id}`} cx={cx} cy={cy} r={4} fill="#66A573" strokeWidth={0} />
+                            );
+                          }}
                         />
                       </LineChart>
                     </ResponsiveContainer>
@@ -329,6 +360,7 @@ export function PatientTrendsDashboard({ accessCode }: { accessCode?: string }) 
               </CardContent>
             </Card>
           ))}
+        </div>
         </div>
       )}
     </div>
