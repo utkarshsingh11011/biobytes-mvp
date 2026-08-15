@@ -2,9 +2,8 @@
 
 import React, { useState, useRef, useMemo } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
-import { OrbitControls, Html, ContactShadows, Environment, useGLTF } from '@react-three/drei'
+import { OrbitControls, Html, ContactShadows, Environment } from '@react-three/drei'
 import * as THREE from 'three'
-import { ErrorBoundary } from './ErrorBoundary'
 
 // Mapping biomarkers to their respective organs
 const ORGAN_MAP: Record<string, string[]> = {
@@ -182,27 +181,7 @@ export default function DigitalTwin({ trends = [], gender = 'male' }: { trends: 
         <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} intensity={1} castShadow />
         <pointLight position={[-10, -10, -10]} intensity={0.5} />
         
-        {/* Dynamic Skeleton with Fallback */}
-        <ErrorBoundary fallback={
-          <>
-            <mesh position={[0, 1.5, 0]}>
-              <capsuleGeometry args={[1.5, 4, 4, 16]} />
-              <meshPhysicalMaterial 
-                color="#4DA1A9" 
-                transparent 
-                opacity={0.1} 
-                roughness={0.1}
-                transmission={0.9}
-                thickness={2}
-              />
-            </mesh>
-            {organs.map((organ) => (
-              <OrganMesh key={organ.id} {...organ} />
-            ))}
-          </>
-        }>
-          <GenderSkeleton gender={gender} organs={organs} />
-        </ErrorBoundary>
+        <GenderSkeleton gender={gender} organs={organs} />
 
         <ContactShadows position={[0, -1.5, 0]} opacity={0.4} scale={10} blur={2} far={4} />
         <OrbitControls 
@@ -226,27 +205,88 @@ export default function DigitalTwin({ trends = [], gender = 'male' }: { trends: 
   )
 }
 
-function GenderSkeleton({ gender, organs }: { gender?: string, organs: any[] }) {
-  // If the user's gender is female, load the female skeleton; otherwise default to male.
-  const modelPath = gender === 'female' 
-    ? '/models/female_skeleton.glb' 
-    : '/models/male_skeleton.glb';
+function GenderSkeleton({ gender = 'male', organs }: { gender?: string, organs: any[] }) {
+  // Procedural mannequin logic based on gender
+  const isFemale = gender === 'female';
+  
+  // Proportions
+  const shoulderWidth = isFemale ? 0.9 : 1.2;
+  const hipWidth = isFemale ? 1.0 : 0.8;
+  const heightScale = isFemale ? 0.9 : 1.0;
 
-  // This will throw a Suspense promise if loading, and an Error if the file is not found (404)
-  // The ErrorBoundary in the parent will catch the 404 and render the primitive fallback.
-  const { scene } = useGLTF(modelPath);
+  const glassMaterial = (
+    <meshPhysicalMaterial 
+      color="#4DA1A9" 
+      transparent 
+      opacity={0.15} 
+      roughness={0.1}
+      transmission={0.9}
+      thickness={1}
+    />
+  );
 
   return (
-    <group position={[0, -1.5, 0]} scale={1.5}>
-      <primitive object={scene} />
-      {/* 
-        We map our glowing organs inside the skeleton.
-        In a perfect world, we would map the materials of the GLTF itself.
-        For now, we superimpose the glowing spheres.
-      */}
-      {organs.map((organ) => (
-        <OrganMesh key={organ.id} {...organ} />
-      ))}
+    <group position={[0, -1, 0]} scale={heightScale}>
+      {/* Head */}
+      <mesh position={[0, 3.8, 0]}>
+        <sphereGeometry args={[0.4, 32, 32]} />
+        {glassMaterial}
+      </mesh>
+      
+      {/* Neck */}
+      <mesh position={[0, 3.3, 0]}>
+        <cylinderGeometry args={[0.15, 0.2, 0.4, 16]} />
+        {glassMaterial}
+      </mesh>
+
+      {/* Torso (Chest to Hips) */}
+      <mesh position={[0, 2.0, 0]}>
+        <capsuleGeometry args={[0.6, 1.8, 4, 16]} />
+        {glassMaterial}
+      </mesh>
+
+      {/* Shoulders */}
+      <mesh position={[-shoulderWidth/2, 2.8, 0]} rotation={[0, 0, Math.PI / 2]}>
+        <capsuleGeometry args={[0.2, shoulderWidth, 4, 16]} />
+        {glassMaterial}
+      </mesh>
+
+      {/* Left Arm */}
+      <mesh position={[-shoulderWidth/2 - 0.2, 1.8, 0]}>
+        <capsuleGeometry args={[0.15, 1.8, 4, 16]} />
+        {glassMaterial}
+      </mesh>
+
+      {/* Right Arm */}
+      <mesh position={[shoulderWidth/2 + 0.2, 1.8, 0]}>
+        <capsuleGeometry args={[0.15, 1.8, 4, 16]} />
+        {glassMaterial}
+      </mesh>
+
+      {/* Hips */}
+      <mesh position={[0, 0.8, 0]} rotation={[0, 0, Math.PI / 2]}>
+        <capsuleGeometry args={[0.25, hipWidth, 4, 16]} />
+        {glassMaterial}
+      </mesh>
+
+      {/* Left Leg */}
+      <mesh position={[-hipWidth/2 + 0.1, -0.5, 0]}>
+        <capsuleGeometry args={[0.2, 2.2, 4, 16]} />
+        {glassMaterial}
+      </mesh>
+
+      {/* Right Leg */}
+      <mesh position={[hipWidth/2 - 0.1, -0.5, 0]}>
+        <capsuleGeometry args={[0.2, 2.2, 4, 16]} />
+        {glassMaterial}
+      </mesh>
+
+      {/* Render the glowing organs inside the torso */}
+      <group position={[0, 0.5, 0]}>
+        {organs.map((organ) => (
+          <OrganMesh key={organ.id} {...organ} />
+        ))}
+      </group>
     </group>
   );
 }
