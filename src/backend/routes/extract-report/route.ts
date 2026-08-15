@@ -127,7 +127,7 @@ export async function POST(req: Request) {
     }
 
     // Import BIOMARKERS_100 at the top of the file ideally, but for now we'll require it here or ensure it's imported.
-    const { BIOMARKERS_100 } = require('@/lib/biomarkers100');
+    const { BIOMARKERS_100 } = require('@backend/config/biomarkers100');
     
     // Variables for UserHealthRecord legacy table
     let hr_hemoglobin: number | null = null;
