@@ -2,8 +2,9 @@
 
 import React, { useState, useRef, useMemo } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
-import { OrbitControls, Html, ContactShadows, Environment } from '@react-three/drei'
+import { OrbitControls, Html, ContactShadows, Environment, useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
+import { ErrorBoundary } from './ErrorBoundary'
 
 // Mapping biomarkers to their respective organs
 const ORGAN_MAP: Record<string, string[]> = {
@@ -110,7 +111,7 @@ const OrganMesh = ({ position, color, label, status, issues, geometryArgs, geome
   )
 }
 
-export default function DigitalTwin({ trends = [] }: { trends: any[] }) {
+export default function DigitalTwin({ trends = [], gender = 'male' }: { trends: any[], gender?: string }) {
   // Map organs to their calculated status based on patient data
   const organs = useMemo(() => {
     const getColor = (status: string) => {
@@ -181,23 +182,27 @@ export default function DigitalTwin({ trends = [] }: { trends: any[] }) {
         <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} intensity={1} castShadow />
         <pointLight position={[-10, -10, -10]} intensity={0.5} />
         
-        {/* Placeholder human body outline (glassmorphism style) */}
-        <mesh position={[0, 1.5, 0]}>
-          <capsuleGeometry args={[1.5, 4, 4, 16]} />
-          <meshPhysicalMaterial 
-            color="#4DA1A9" 
-            transparent 
-            opacity={0.1} 
-            roughness={0.1}
-            transmission={0.9}
-            thickness={2}
-          />
-        </mesh>
-
-        {/* Dynamic Organs */}
-        {organs.map((organ) => (
-          <OrganMesh key={organ.id} {...organ} />
-        ))}
+        {/* Dynamic Skeleton with Fallback */}
+        <ErrorBoundary fallback={
+          <>
+            <mesh position={[0, 1.5, 0]}>
+              <capsuleGeometry args={[1.5, 4, 4, 16]} />
+              <meshPhysicalMaterial 
+                color="#4DA1A9" 
+                transparent 
+                opacity={0.1} 
+                roughness={0.1}
+                transmission={0.9}
+                thickness={2}
+              />
+            </mesh>
+            {organs.map((organ) => (
+              <OrganMesh key={organ.id} {...organ} />
+            ))}
+          </>
+        }>
+          <GenderSkeleton gender={gender} organs={organs} />
+        </ErrorBoundary>
 
         <ContactShadows position={[0, -1.5, 0]} opacity={0.4} scale={10} blur={2} far={4} />
         <OrbitControls 
@@ -219,4 +224,29 @@ export default function DigitalTwin({ trends = [] }: { trends: any[] }) {
       </div>
     </div>
   )
+}
+
+function GenderSkeleton({ gender, organs }: { gender?: string, organs: any[] }) {
+  // If the user's gender is female, load the female skeleton; otherwise default to male.
+  const modelPath = gender === 'female' 
+    ? '/models/female_skeleton.glb' 
+    : '/models/male_skeleton.glb';
+
+  // This will throw a Suspense promise if loading, and an Error if the file is not found (404)
+  // The ErrorBoundary in the parent will catch the 404 and render the primitive fallback.
+  const { scene } = useGLTF(modelPath);
+
+  return (
+    <group position={[0, -1.5, 0]} scale={1.5}>
+      <primitive object={scene} />
+      {/* 
+        We map our glowing organs inside the skeleton.
+        In a perfect world, we would map the materials of the GLTF itself.
+        For now, we superimpose the glowing spheres.
+      */}
+      {organs.map((organ) => (
+        <OrganMesh key={organ.id} {...organ} />
+      ))}
+    </group>
+  );
 }

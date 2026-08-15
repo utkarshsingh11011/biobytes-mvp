@@ -19,7 +19,7 @@ const DigitalTwin = dynamic(() => import('@frontend/components/DigitalTwin'), {
   )
 })
 
-export function PatientTrendsDashboard({ accessCode }: { accessCode?: string }) {
+export function PatientTrendsDashboard({ accessCode, gender }: { accessCode?: string, gender?: string }) {
   const [trends, setTrends] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [months, setMonths] = useState(6)
@@ -216,7 +216,7 @@ export function PatientTrendsDashboard({ accessCode }: { accessCode?: string }) 
       ) : (
         <div className="space-y-8">
           <div className="w-full">
-            <DigitalTwin trends={trends} />
+            <DigitalTwin trends={trends} gender={gender} />
           </div>
           
           <div id="charts-container" className="grid gap-6 p-2 md:grid-cols-2">

@@ -12,6 +12,7 @@ model User {
   email         String    @unique
   passwordHash  String
   name          String?
+  gender        String?   // "male" or "female"
   role          String    @default("PATIENT") // PATIENT, DOCTOR, ADMIN, LAB_PARTNER
   accountStatus String    @default("ACTIVE") // ACTIVE, SUSPENDED
   createdAt     DateTime  @default(now())
