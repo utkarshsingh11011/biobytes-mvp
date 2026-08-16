@@ -4,7 +4,7 @@ const ORGAN_MAP: Record<string, string[]> = {
   brain: [],
   heart: ['CHOL', 'LDL', 'HDL', 'TRIG'],
   liver: ['SGPT', 'SGOT', 'BILI'],
-  kidneys: ['CREAT', 'BUN', 'URIC'],
+  kidneys: ['CREAT', 'BUN', 'URIC', 'URINE'],
   pancreas: ['GLUC', 'HBA1C'],
 }
 

@@ -136,5 +136,12 @@ export const BIOMARKERS_100: BiomarkerDef[] = [
   { name: 'ANA', code: 'ANA', category: 'Hormones & Others', unit: 'Titer', refMin: null, refMax: null },
   { name: 'IgE Total', code: 'IGE', category: 'Hormones & Others', unit: 'IU/mL', refMin: 0, refMax: 100 },
   { name: 'Serum Amylase', code: 'AMYLASE', category: 'Hormones & Others', unit: 'U/L', refMin: 28, refMax: 100 },
-  { name: 'Serum Lipase', code: 'LIPASE', category: 'Hormones & Others', unit: 'U/L', refMin: 13, refMax: 60 }
+  { name: 'Serum Lipase', code: 'LIPASE', category: 'Hormones & Others', unit: 'U/L', refMin: 13, refMax: 60 },
+
+  // Urine Analysis
+  { name: 'Specific Gravity', code: 'URINE_SG', category: 'Urine Analysis', unit: '', refMin: 1.005, refMax: 1.030 },
+  { name: 'Urine pH', code: 'URINE_PH', category: 'Urine Analysis', unit: '', refMin: 5.0, refMax: 8.0 },
+  { name: 'Urine Pus Cells', code: 'URINE_PUS_CELLS', category: 'Urine Analysis', unit: '/hpf', refMin: 0, refMax: 5 },
+  { name: 'Urine RBC', code: 'URINE_RBC', category: 'Urine Analysis', unit: '/hpf', refMin: 0, refMax: 0 },
+  { name: 'Urine Epithelial Cells', code: 'URINE_EPITHELIAL_CELLS', category: 'Urine Analysis', unit: '/hpf', refMin: 0, refMax: 5 }
 ];
